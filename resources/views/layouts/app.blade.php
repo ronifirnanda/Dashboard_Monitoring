@@ -42,6 +42,7 @@
                 radial-gradient(circle at top right, rgba(31, 107, 69, 0.07), transparent 26%),
                 var(--app-bg);
             color: var(--text);
+            transition: background-color 0.25s ease, color 0.25s ease;
         }
 
         a {
@@ -287,6 +288,11 @@
             display: grid;
             place-items: center;
             box-shadow: 0 8px 18px rgba(20, 35, 24, 0.05);
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+
+        .theme-toggle i {
+            font-size: 16px;
         }
 
         .profile-chip {
@@ -575,6 +581,167 @@
             padding-bottom: 14px;
         }
 
+        html[data-theme='dark'] {
+            color-scheme: dark;
+        }
+
+        html[data-theme='dark'] body {
+            --app-bg: #0f1713;
+            --surface: #131d18;
+            --surface-soft: #18241e;
+            --sidebar-border: #213229;
+            --primary: #46b67a;
+            --primary-2: #5fd18f;
+            --primary-soft: #1a2f24;
+            --accent: #1c2d24;
+            --text: #deebe4;
+            --muted: #8ea499;
+            --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+            --shadow-soft: 0 10px 28px rgba(0, 0, 0, 0.3);
+            background:
+                radial-gradient(circle at top left, rgba(70, 182, 122, 0.13), transparent 28%),
+                radial-gradient(circle at top right, rgba(95, 209, 143, 0.1), transparent 26%),
+                var(--app-bg);
+        }
+
+        html[data-theme='dark'] .sidebar,
+        html[data-theme='dark'] .topbar,
+        html[data-theme='dark'] .panel,
+        html[data-theme='dark'] .stat-card,
+        html[data-theme='dark'] .search-shortcut,
+        html[data-theme='dark'] .icon-btn,
+        html[data-theme='dark'] .btn-outline-soft,
+        html[data-theme='dark'] .search-box input,
+        html[data-theme='dark'] .nav-link .icon {
+            background: var(--surface);
+            color: var(--text);
+            border-color: var(--sidebar-border);
+        }
+
+        html[data-theme='dark'] .sidebar {
+            background: rgba(18, 27, 22, 0.92);
+            box-shadow: 10px 0 30px rgba(0, 0, 0, 0.3);
+        }
+
+        html[data-theme='dark'] .brand {
+            border-bottom-color: #25372d;
+        }
+
+        html[data-theme='dark'] .sidebar-label {
+            color: #7b9287;
+        }
+
+        html[data-theme='dark'] .nav-link {
+            color: var(--text);
+        }
+
+        html[data-theme='dark'] .nav-link:hover {
+            background: #1c2a23;
+            border-color: #2b3d33;
+        }
+
+        html[data-theme='dark'] .nav-link.active {
+            background: linear-gradient(135deg, #1d3528, #1a2d23);
+            border-color: #2f4f3f;
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.24);
+        }
+
+        html[data-theme='dark'] .nav-link.active .icon {
+            background: #2a8b5a;
+            border-color: #2a8b5a;
+            color: #f2fff8;
+        }
+
+        html[data-theme='dark'] .nav-link .badge-pill {
+            background: #22352b;
+            color: #9ab1a5;
+        }
+
+        html[data-theme='dark'] .search-box input {
+            background: #1a2721;
+        }
+
+        html[data-theme='dark'] .search-box input::placeholder,
+        html[data-theme='dark'] .search-shortcut,
+        html[data-theme='dark'] .search-box i,
+        html[data-theme='dark'] .day,
+        html[data-theme='dark'] .table-card .table thead th {
+            color: #8ea498;
+        }
+
+        html[data-theme='dark'] .search-shortcut {
+            background: #17231d;
+            border-color: #2a3d32;
+        }
+
+        html[data-theme='dark'] .icon-btn:hover,
+        html[data-theme='dark'] .btn-outline-soft:hover {
+            background: #1c2a23;
+        }
+
+        html[data-theme='dark'] .btn-outline-soft {
+            border-color: #2a3d32;
+            color: var(--text);
+        }
+
+        html[data-theme='dark'] .stat-card {
+            border-color: #24362c;
+        }
+
+        html[data-theme='dark'] .stat-card:not(.stat-card--primary) {
+            background: #131f19;
+        }
+
+        html[data-theme='dark'] .stat-card--primary,
+        html[data-theme='dark'] .sidebar-card,
+        html[data-theme='dark'] .btn-primary-soft {
+            background: linear-gradient(180deg, #2b8f5d 0%, #1a5e3b 100%);
+        }
+
+        html[data-theme='dark'] .panel,
+        html[data-theme='dark'] .topbar {
+            border-color: #24362c;
+        }
+
+        html[data-theme='dark'] .bar {
+            background: repeating-linear-gradient(
+                135deg,
+                #2a3a31 0,
+                #2a3a31 8px,
+                #1f2e26 8px,
+                #1f2e26 16px
+            );
+        }
+
+        html[data-theme='dark'] .bar.filled {
+            background: linear-gradient(180deg, #5ac086 0%, #2a8b5a 100%);
+            box-shadow: 0 10px 18px rgba(0, 0, 0, 0.3);
+        }
+
+        html[data-theme='dark'] .reminder-card {
+            background: linear-gradient(180deg, #16251e 0%, #12201a 100%);
+            border-color: #294237;
+        }
+
+        html[data-theme='dark'] .table-card .table {
+            color: #d5e3db;
+        }
+
+        html[data-theme='dark'] .table-card .table thead th {
+            background: #16241d;
+            border-bottom-color: #2a3d33;
+        }
+
+        html[data-theme='dark'] .table-card .table td {
+            border-bottom-color: #223229;
+        }
+
+        html[data-theme='dark'] .badge.text-bg-light {
+            background: #22352b !important;
+            color: #d4e2da !important;
+            border-color: #32473b !important;
+        }
+
         @media (max-width: 1200px) {
             .stats-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -691,6 +858,9 @@
                 </div>
 
                 <div class="topbar-actions">
+                    <button type="button" id="theme-toggle" class="icon-btn theme-toggle" aria-label="Switch theme" title="Switch theme">
+                        <i id="theme-toggle-icon" class="bi bi-moon-stars-fill"></i>
+                    </button>
                     <button type="button" class="icon-btn" aria-label="Messages"><i class="bi bi-envelope"></i></button>
                     <button type="button" class="icon-btn" aria-label="Notifications"><i class="bi bi-bell"></i></button>
                     <div class="profile-chip">
@@ -722,6 +892,47 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (function () {
+            const key = 'monitoring-theme';
+            const root = document.documentElement;
+            const button = document.getElementById('theme-toggle');
+            const icon = document.getElementById('theme-toggle-icon');
+
+            function applyTheme(theme) {
+                root.setAttribute('data-theme', theme);
+                if (icon) {
+                    icon.className = theme === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
+                }
+
+                if (button) {
+                    const label = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+                    button.setAttribute('aria-label', label);
+                    button.setAttribute('title', label);
+                }
+            }
+
+            function resolveTheme() {
+                const saved = window.localStorage.getItem(key);
+                if (saved === 'dark' || saved === 'light') {
+                    return saved;
+                }
+
+                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+
+            let currentTheme = resolveTheme();
+            applyTheme(currentTheme);
+
+            if (button) {
+                button.addEventListener('click', function () {
+                    currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                    window.localStorage.setItem(key, currentTheme);
+                    applyTheme(currentTheme);
+                });
+            }
+        })();
+    </script>
     @stack('scripts')
 </body>
 </html>
