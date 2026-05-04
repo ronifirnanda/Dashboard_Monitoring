@@ -819,6 +819,12 @@
                         <span class="badge-pill">Data</span>
                     </a>
                 </li>
+                <li>
+                    <a href="{{ route('archive') }}" class="nav-link @if(Route::currentRouteName() == 'archive') active @endif">
+                        <span class="icon"><i class="bi bi-archive"></i></span>
+                        <span class="text">Arsip File</span>
+                    </a>
+                </li>
             </ul>
 
             <div class="sidebar-label">General</div>

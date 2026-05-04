@@ -2,11 +2,10 @@
 
 @section('title', 'Keutata')
 
-@section('subtitle', 'Data Excel yang berhasil dibaca akan muncul dengan gaya visual yang sama seperti dashboard utama.')
+@section('subtitle', 'Upload file Excel baru, sistem akan mempelajari struktur sheet terlebih dahulu, lalu menampilkan data yang berhasil dikenali.')
 
 @section('page-actions')
 <a href="#" class="btn-pill btn-outline-soft"><i class="bi bi-funnel me-2"></i>Filter</a>
-<a href="#" class="btn-pill btn-primary-soft"><i class="bi bi-upload me-2"></i>Import File</a>
 @endsection
 
 @section('content')
@@ -25,9 +24,38 @@
         </div>
     </div>
 
+    @if(session('success'))
+        <div class="alert alert-success border-0 rounded-4">
+            <strong>Berhasil:</strong> {{ session('success') }}
+        </div>
+    @endif
+
+    @if(session('uploadError'))
+        <div class="alert alert-danger border-0 rounded-4">
+            <strong>Upload gagal:</strong> {{ session('uploadError') }}
+        </div>
+    @endif
+
     @if($error)
         <div class="alert alert-danger border-0 rounded-4">
             <strong>Gagal:</strong> {{ $error }}
+        </div>
+    @endif
+
+    @if(!empty($analysis))
+        <div class="row g-3 mb-4">
+            @foreach($analysis as $sheetAnalysis)
+                <div class="col-12 col-lg-4">
+                    <div class="reminder-card h-100">
+                        <div>
+                            <h4 class="mb-2">{{ $sheetAnalysis['sheet'] }}</h4>
+                            <p class="mb-2">Mode: {{ $sheetAnalysis['mode'] === 'detected' ? 'struktur terdeteksi' : 'fallback template' }}</p>
+                            <p class="mb-2">Header baris: {{ $sheetAnalysis['header_row'] }}</p>
+                            <p class="mb-0">Kolom dikenali: {{ $sheetAnalysis['recognized_columns'] }} | Baris data: {{ $sheetAnalysis['rows_found'] }}</p>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
         </div>
     @endif
 
@@ -45,7 +73,7 @@
                     <tr>
                         <th>No.</th>
                         <th>Sheet</th>
-                        <th>Uraian KRO</th>
+                        <th>Tim</th>
                         <th>Nominal RPD</th>
                         <th>Deviasi 5%</th>
                         <th>Uraian</th>
@@ -57,7 +85,7 @@
                         <tr>
                             <td>{{ $row['no'] }}</td>
                             <td><span class="badge text-bg-light border">{{ $row['sheet'] }}</span></td>
-                            <td>{{ $row['uraian_kro'] }}</td>
+                            <td>{{ $row['tim_display'] ?? '-' }}</td>
                             <td>{{ $row['nominal_rpd'] }}</td>
                             <td>{{ $row['deviasi'] }}</td>
                             <td>{{ $row['uraian'] }}</td>

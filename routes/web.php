@@ -6,3 +6,6 @@ use App\Http\Controllers\DashboardController;
 Route::get('/', [DashboardController::class, 'overview'])->name('overview');
 Route::get('/overview', [DashboardController::class, 'overview'])->name('overview.alt');
 Route::get('/keutata', [DashboardController::class, 'keutata'])->name('keutata');
+Route::post('/keutata/import', [DashboardController::class, 'importKeutata'])->name('keutata.import');
+Route::get('/archive', [DashboardController::class, 'archive'])->name('archive');
+Route::get('/archive/load/{id}', [DashboardController::class, 'archiveLoad'])->name('archive.load');
