@@ -2,14 +2,92 @@
 
 @section('title', 'Overview')
 
-@section('subtitle', 'Plan, prioritize, and monitor your tasks with a calmer, greener dashboard.')
+@section('subtitle', 'Dashboard ringkas untuk 4 area grafik, dengan Grafik 1 dan 2 khusus belanja per bulan.')
 
 @section('page-actions')
-<a href="#" class="btn-pill btn-primary-soft"><i class="bi bi-plus-lg me-2"></i>Add Project</a>
-<a href="#" class="btn-pill btn-outline-soft"><i class="bi bi-upload me-2"></i>Import Data</a>
+<a href="#charts" class="btn-pill btn-primary-soft"><i class="bi bi-bar-chart-line me-2"></i>Lihat Grafik</a>
+<a href="#upload" class="btn-pill btn-outline-soft"><i class="bi bi-upload me-2"></i>Upload Excel</a>
 @endsection
 
 @section('content')
+<style>
+    :root {
+        --chart-forest: #1f6b45;
+        --chart-leaf: #4d9f60;
+        --chart-soft: #edf5ef;
+        --chart-border: #dbe8dd;
+        --chart-surface: #ffffff;
+        --chart-shadow: 0 18px 40px rgba(25, 56, 33, 0.08);
+    }
+
+    .dashboard-charts {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .chart-card {
+        min-height: 340px;
+        border: 1px solid var(--chart-border);
+        border-radius: 1.25rem;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fbf8 100%);
+        box-shadow: var(--chart-shadow);
+        overflow: hidden;
+    }
+
+    .metric-label {
+        font-size: 0.76rem;
+        color: #5e6f60;
+        margin-bottom: 0.25rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .metric-value {
+        font-weight: 800;
+        color: #203d2a;
+        font-size: 1.08rem;
+    }
+
+    .chart-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: fit-content;
+        padding: 0.3rem 0.65rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 800;
+        white-space: nowrap;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.38);
+    }
+
+    .chart-pill.target {
+        background: linear-gradient(180deg, #eff8f1 0%, #e1f0e5 100%);
+        color: var(--chart-forest);
+    }
+
+        background: linear-gradient(180deg, #f4f8f5 0%, #e9f1eb 100%);
+        color: #35513d;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--chart-forest) 0%, var(--chart-leaf) 100%);
+    }
+
+    .chart-empty-note {
+    }
+
+    .bar-tone-realisasi {
+        background: linear-gradient(180deg, #7bbd86 0%, #4d9f60 100%);
+    }
+
+    .chart-note {
+        margin-top: 0.6rem;
+        font-size: 0.8rem;
+        color: #637266;
+    }
+</style>
+
 @if ($fileName)
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         <i class="bi bi-check-circle me-2"></i>
@@ -18,13 +96,12 @@
     </div>
 @endif
 
-<!-- Upload Form -->
-<form action="{{ route('keutata.import') }}" method="POST" enctype="multipart/form-data" class="panel mb-4">
+<form id="upload" action="{{ route('keutata.import') }}" method="POST" enctype="multipart/form-data" class="panel mb-4">
     @csrf
     <div class="panel-header">
         <div>
             <div class="panel-title">Upload Excel Baru</div>
-            <div class="panel-small">Sistem akan mendeteksi struktur dan menampilkan data secara otomatis.</div>
+            <div class="panel-small">Bagian ini dipertahankan supaya data dashboard tetap bisa dimuat dari Excel.</div>
         </div>
     </div>
 
@@ -42,7 +119,7 @@
 
     <div style="padding: 1.5rem;">
         <div class="d-flex flex-column flex-lg-row align-items-lg-end gap-3">
-            <div class="flex-grow-1">
+            <div class="grow">
                 <label for="excel_file" class="form-label fw-semibold mb-2">Pilih File Excel</label>
                 <input
                     type="file"
@@ -62,162 +139,252 @@
                 </button>
             </div>
         </div>
-        <small class="text-muted mt-3 d-block">File Excel akan dianalisis, header terdeteksi secara otomatis, dan data ditampilkan di kedua halaman.</small>
+        <small class="text-muted mt-3 d-block">File Excel akan dianalisis, header terdeteksi otomatis, lalu dipakai oleh grafik yang ada di dashboard.</small>
     </div>
 </form>
 
-<div class="stats-grid">
-    <div class="stat-card stat-card--primary">
-        <div class="label">Total Projects</div>
-        <div class="value">24</div>
-        <div class="trend"><i class="bi bi-graph-up-arrow"></i> Increased from last month</div>
-    </div>
-
-    <div class="stat-card">
-        <div class="label">Ended Projects</div>
-        <div class="value">10</div>
-        <div class="trend"><i class="bi bi-arrow-up-right"></i> Increased from last month</div>
-    </div>
-
-    <div class="stat-card">
-        <div class="label">Running Projects</div>
-        <div class="value">12</div>
-        <div class="trend"><i class="bi bi-arrow-up-right"></i> Increased from last month</div>
-    </div>
-
-    <div class="stat-card">
-        <div class="label">Pending Project</div>
-        <div class="value">2</div>
-        <div class="trend"><i class="bi bi-dot"></i> On discuss</div>
-    </div>
-</div>
-
-<div class="section-grid">
-    <div class="panel">
-        <div class="panel-header">
-            <div>
-                <div class="panel-title">Grafik Target vs Realisasi</div>
-                <div class="panel-small">Pilih bulan dulu, lalu grafik akan tampil untuk bulan tersebut.</div>
-            </div>
-            <button type="button" class="icon-btn" style="width:36px;height:36px;"><i class="bi bi-arrow-up-right"></i></button>
+<section id="charts" class="panel">
+    <div class="panel-header">
+        <div>
+            <div class="panel-title">Dashboard Grafik</div>
+            <div class="panel-small">Grafik 1 menampilkan Belanja Barang, Grafik 2 menampilkan Belanja Pegawai.</div>
         </div>
+    </div>
 
-        @if (!empty($chart['months']))
-            <form method="GET" action="{{ route('overview') }}" style="margin-bottom:1rem; display:flex; gap:.75rem; flex-wrap:wrap; align-items:end;">
-                <div style="min-width:220px; flex:1;">
-                    <label for="chart_month" class="form-label fw-semibold mb-2">Pilih Bulan</label>
-                    <select name="chart_month" id="chart_month" class="form-select rounded-4">
-                        <option value="">-- pilih bulan --</option>
-                        @foreach ($chart['months'] as $month)
-                            <option value="{{ $month['label'] }}" @selected(($selectedMonth ?? '') === $month['label'])>{{ $month['label'] }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <button type="submit" class="btn-pill btn-primary-soft border-0">Tampilkan Grafik</button>
-                </div>
-            </form>
-
-            <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
-                <div style="flex:1; min-width:180px; background:#f7faf7; border:1px solid #dfeee1; border-radius:10px; padding:.75rem;">
-                    <div style="font-size:.78rem; color:#5e6f60;">Total Target</div>
-                    <div style="font-weight:700; color:#284b2f;">{{ $chart['total_target_formatted'] }}</div>
-                </div>
-                <div style="flex:1; min-width:180px; background:#f7faf7; border:1px solid #dfeee1; border-radius:10px; padding:.75rem;">
-                    <div style="font-size:.78rem; color:#5e6f60;">Total Realisasi</div>
-                    <div style="font-weight:700; color:#284b2f;">{{ $chart['total_realisasi_formatted'] }}</div>
-                </div>
-                <div style="flex:1; min-width:180px; background:#f7faf7; border:1px solid #dfeee1; border-radius:10px; padding:.75rem;">
-                    <div style="font-size:.78rem; color:#5e6f60;">Serapan Rata-rata</div>
-                    <div style="font-weight:700; color:#284b2f;">{{ number_format($chart['overall_ratio'], 2, ',', '.') }}%</div>
-                </div>
+    <div style="padding: 0 1.25rem 1rem 1.25rem;">
+        <form method="GET" action="{{ route('overview') }}" style="display:flex; gap:.75rem; flex-wrap:wrap; align-items:end;">
+            <div style="min-width:220px; flex:1; max-width:360px;">
+                <label for="chart_month" class="form-label fw-semibold mb-2">Filter Bulan Grafik</label>
+                <select name="chart_month" id="chart_month" class="form-select rounded-4" @if(empty($monthOptions)) disabled @endif>
+                    <option value="">-- pilih bulan --</option>
+                    @foreach ($monthOptions as $monthOption)
+                        <option value="{{ $monthOption }}" @selected(($selectedMonth ?? '') === $monthOption)>{{ $monthOption }}</option>
+                    @endforeach
+                </select>
             </div>
-
-            <div style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap; margin-bottom:1rem; font-size:.82rem; color:#516553;">
-                <div style="display:flex; align-items:center; gap:.45rem;"><span style="width:12px; height:12px; border-radius:999px; background:#1f6b45; display:inline-block;"></span>Target</div>
-                <div style="display:flex; align-items:center; gap:.45rem;"><span style="width:12px; height:12px; border-radius:999px; background:#3f8f51; display:inline-block;"></span>Realisasi</div>
+            <div>
+                <button type="submit" class="btn-pill btn-primary-soft border-0" @if(empty($monthOptions)) disabled @endif>Tampilkan</button>
             </div>
+        </form>
 
-            @if (!empty($selectedMonthData))
-                <div style="border:1px solid #dfeee1; border-radius:12px; padding:1rem; background:#fbfefb;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; gap:.75rem; margin-bottom:.8rem; flex-wrap:wrap;">
-                        <h5 style="margin:0; color:#304935;">{{ $selectedMonthData['label'] }}</h5>
-                        <div style="font-size:.82rem; color:#5e6f60;">
-                            {{ $selectedMonthData['total_realisasi_formatted'] }} / {{ $selectedMonthData['total_target_formatted'] }}
-                            ({{ number_format($selectedMonthData['ratio'], 2, ',', '.') }}%)
-                        </div>
-                    </div>
-
-                    <div class="chart-bars" style="grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); height: 190px; align-items:flex-end; margin-bottom:.8rem;">
-                        @foreach ($selectedMonthData['teams'] as $team)
-                            <div class="bar-wrap" title="{{ $team['label'] }} | Target: {{ $team['target_formatted'] }} | Realisasi: {{ $team['realisasi_formatted'] }}">
-                                <div style="display:flex; align-items:flex-end; justify-content:center; gap:8px; width:100%; height:160px;">
-                                    <div style="display:flex; flex-direction:column; align-items:center; gap:6px; flex:1;">
-                                        <div class="bar filled" style="width:100%; height: {{ $team['target_bar_height'] }}px; background: linear-gradient(180deg, #1f6b45 0%, #2f8b59 100%);"></div>
-                                        <span style="font-size:10px; color:#6b7c72;">T</span>
-                                    </div>
-                                    <div style="display:flex; flex-direction:column; align-items:center; gap:6px; flex:1;">
-                                        <div class="bar filled" style="width:100%; height: {{ $team['realisasi_bar_height'] }}px; background: linear-gradient(180deg, #77b66d 0%, #4d9f60 100%);"></div>
-                                        <span style="font-size:10px; color:#6b7c72;">R</span>
-                                    </div>
-                                </div>
-                                <div class="day" style="max-width:72px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ $team['label'] }}</div>
-                            </div>
-                        @endforeach
-                    </div>
-
-                    <div style="display:grid; gap:.45rem;">
-                        @foreach ($selectedMonthData['teams'] as $team)
-                            <div>
-                                <div style="display:flex; justify-content:space-between; gap:1rem; font-size:.8rem; color:#516553; margin-bottom:.2rem;">
-                                    <strong style="color:#304935;">{{ $team['label'] }}</strong>
-                                    <span>{{ $team['realisasi_formatted'] }} / {{ $team['target_formatted'] }} ({{ number_format($team['ratio'], 2, ',', '.') }}%)</span>
-                                </div>
-                                <div style="height:8px; border-radius:999px; background:#e8efe9; overflow:hidden;">
-                                    <div style="height:100%; width: {{ $team['ratio'] }}%; background: linear-gradient(90deg, #3f8f51 0%, #77b66d 100%);"></div>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-            @else
-                <div class="reminder-card" style="margin-top:.5rem;">
-                    <div>
-                        <h4>Pilih bulan terlebih dahulu</h4>
-                        <p>Setelah bulan dipilih, grafik target vs realisasi per tim akan ditampilkan di sini.</p>
-                    </div>
-                </div>
-            @endif
-        @else
-            <div class="reminder-card" style="margin-top:.5rem;">
-                <div>
-                    <h4>Data bulanan belum ditemukan</h4>
-                    <p>Grafik ini hanya menampilkan sheet yang nama-nya bulan (contoh: Februari, Maret, April), lalu merinci target/realisasi per tim.</p>
-                </div>
-            </div>
+        @if(empty($monthOptions))
+            <div style="width:100%; font-size:.82rem; color:#7a8a7d;">Belum ada data bulan yang bisa dipilih.</div>
         @endif
     </div>
 
-    <div class="panel">
-        <div class="panel-header">
-            <div>
-                <div class="panel-title">Reminders</div>
-                <div class="panel-small">Today agenda</div>
+    <div class="dashboard-charts">
+        <div class="panel chart-card">
+            <div class="panel-header">
+                <div>
+                    <div class="panel-title">Grafik 1 - Belanja Barang</div>
+                    <div class="panel-small">Grafik Target vs Realisasi untuk Belanja Barang.</div>
+                </div>
+            </div>
+
+            @if (!empty($monthOptions) || !empty($selectedMonthDataBarang))
+                <div class="metric-grid">
+                    <div class="metric-box">
+                        <div class="metric-label">Total Target</div>
+                        <div class="metric-value">{{ $chartBelanjaBarang['total_target_formatted'] }}</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">Total Realisasi</div>
+                        <div class="metric-value">{{ $chartBelanjaBarang['total_realisasi_formatted'] }}</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">Serapan Rata-rata</div>
+                        <div class="metric-value">{{ number_format($chartBelanjaBarang['overall_ratio'], 2, ',', '.') }}%</div>
+                    </div>
+                </div>
+
+                @if (!empty($selectedMonthDataBarang))
+                    <div class="chart-shell">
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:.75rem; margin-bottom:.8rem; flex-wrap:wrap;">
+                            <h5 style="margin:0; color:#304935;">{{ $selectedMonthDataBarang['label'] }}</h5>
+                            <div style="font-size:.82rem; color:#5e6f60;">
+                                {{ $selectedMonthDataBarang['total_realisasi_formatted'] }} / {{ $selectedMonthDataBarang['total_target_formatted'] }}
+                                ({{ number_format($selectedMonthDataBarang['ratio'], 2, ',', '.') }}%)
+                            </div>
+                        </div>
+
+                        @if (!empty($selectedMonthDataBarang['teams']))
+                            <div class="chart-bars" style="grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); height: 190px; align-items:flex-end; margin-bottom:.8rem;">
+                                @foreach ($selectedMonthDataBarang['teams'] as $team)
+                                    <div class="bar-wrap" title="{{ $team['label'] }} | Target: {{ $team['target_formatted'] }} | Realisasi: {{ $team['realisasi_formatted'] }}">
+                                        <div style="display:flex; align-items:flex-end; justify-content:center; gap:8px; width:100%; height:160px;">
+                                            <div style="display:flex; flex-direction:column; align-items:center; gap:6px; flex:1;">
+                                                <div class="bar filled" style="width:100%; height: {{ $team['target_bar_height'] }}px; background: linear-gradient(180deg, #1f6b45 0%, #2f8b59 100%);"></div>
+                                                <span style="font-size:10px; color:#6b7c72;">T</span>
+                                            </div>
+                                            <div style="display:flex; flex-direction:column; align-items:center; gap:6px; flex:1;">
+                                                <div class="bar filled" style="width:100%; height: {{ $team['realisasi_bar_height'] }}px; background: linear-gradient(180deg, #77b66d 0%, #4d9f60 100%);"></div>
+                                                <span style="font-size:10px; color:#6b7c72;">R</span>
+                                            </div>
+                                        </div>
+                                        <div class="day" style="max-width:72px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ $team['label'] }}</div>
+                                        <div style="display:flex; justify-content:space-between; align-items:center; gap:.5rem; font-size:.8rem; color:#516553; margin-top:.35rem;">
+                                            <span style="font-weight:700; color:#304935;">{{ $team['realisasi_formatted'] }} / {{ $team['target_formatted'] }}</span>
+                                            <span>{{ number_format($team['ratio'], 2, ',', '.') }}%</span>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <div class="placeholder-chart">
+                                <div>
+                                    <div class="placeholder-badge">Data belum tersedia</div>
+                                    <h5 style="margin:.75rem 0 .35rem; color:#304935;">Belanja Barang kosong di bulan ini</h5>
+                                    <p style="margin:0; color:#5e6f60;">Template sudah disiapkan. Saat data Belanja Barang terisi, grafik akan muncul otomatis.</p>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                @else
+                    <div class="placeholder-chart">
+                        <div>
+                            <div class="placeholder-badge">Belum ada bulan dipilih</div>
+                            <h5 style="margin:.75rem 0 .35rem; color:#304935;">Pilih bulan terlebih dahulu</h5>
+                            <p style="margin:0; color:#5e6f60;">Begitu bulan dipilih, target dan realisasi per tim akan muncul di area ini.</p>
+                        </div>
+                    </div>
+                @endif
+            @else
+                <div class="placeholder-chart">
+                    <div>
+                        <div class="placeholder-badge">Data belum tersedia</div>
+                        <h5 style="margin:.75rem 0 .35rem; color:#304935;">Data bulanan belum ditemukan</h5>
+                        <p style="margin:0; color:#5e6f60;">Upload file Excel yang sesuai agar data bulanan bisa dipetakan ke grafik ini.</p>
+                    </div>
+                </div>
+            @endif
+        </div>
+
+        <div class="panel chart-card">
+            <div class="panel-header">
+                <div>
+                    <div class="panel-title">Grafik 2 - Belanja Pegawai</div>
+                    <div class="panel-small">Grafik Target vs Realisasi untuk Belanja Pegawai.</div>
+                </div>
+            </div>
+
+            <div class="metric-grid">
+                <div class="metric-box">
+                    <div class="metric-label">Total Target</div>
+                    <div class="metric-value">{{ $chartBelanjaPegawai['total_target_formatted'] }}</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Total Realisasi</div>
+                    <div class="metric-value">{{ $chartBelanjaPegawai['total_realisasi_formatted'] }}</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Serapan Rata-rata</div>
+                    <div class="metric-value">{{ number_format($chartBelanjaPegawai['overall_ratio'], 2, ',', '.') }}%</div>
+                </div>
+            </div>
+
+            @if (!empty($monthOptions) || !empty($selectedMonthDataPegawai))
+                @if (!empty($selectedMonthDataPegawai))
+                    <div class="chart-shell">
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:.75rem; margin-bottom:.8rem; flex-wrap:wrap;">
+                            <h5 style="margin:0; color:#304935;">{{ $selectedMonthDataPegawai['label'] }}</h5>
+                            <div style="font-size:.82rem; color:#5e6f60;">
+                                {{ $selectedMonthDataPegawai['total_realisasi_formatted'] }} / {{ $selectedMonthDataPegawai['total_target_formatted'] }}
+                                ({{ number_format($selectedMonthDataPegawai['ratio'], 2, ',', '.') }}%)
+                            </div>
+                        </div>
+
+                        @if (!empty($selectedMonthDataPegawai['teams']))
+                            <div class="chart-bars" style="grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); height: 190px; align-items:flex-end; margin-bottom:.8rem;">
+                                @foreach ($selectedMonthDataPegawai['teams'] as $team)
+                                    <div class="bar-wrap" title="{{ $team['label'] }} | Target: {{ $team['target_formatted'] }} | Realisasi: {{ $team['realisasi_formatted'] }}">
+                                        <div style="display:flex; align-items:flex-end; justify-content:center; gap:8px; width:100%; height:160px;">
+                                            <div style="display:flex; flex-direction:column; align-items:center; gap:6px; flex:1;">
+                                                <div class="bar filled" style="width:100%; height: {{ $team['target_bar_height'] }}px; background: linear-gradient(180deg, #38503f 0%, #4b6a56 100%);"></div>
+                                                <span style="font-size:10px; color:#6b7c72;">T</span>
+                                            </div>
+                                            <div style="display:flex; flex-direction:column; align-items:center; gap:6px; flex:1;">
+                                                <div class="bar filled" style="width:100%; height: {{ $team['realisasi_bar_height'] }}px; background: linear-gradient(180deg, #8bc19a 0%, #6fa47f 100%);"></div>
+                                                <span style="font-size:10px; color:#6b7c72;">R</span>
+                                            </div>
+                                        </div>
+                                        <div class="day" style="max-width:72px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ $team['label'] }}</div>
+                                        <div style="display:flex; justify-content:space-between; align-items:center; gap:.5rem; font-size:.8rem; color:#516553; margin-top:.35rem;">
+                                            <span style="font-weight:700; color:#304935;">{{ $team['realisasi_formatted'] }} / {{ $team['target_formatted'] }}</span>
+                                            <span>{{ number_format($team['ratio'], 2, ',', '.') }}%</span>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <div class="placeholder-chart">
+                                <div>
+                                    <div class="placeholder-badge">Data belum tersedia</div>
+                                    <h5 style="margin:.75rem 0 .35rem; color:#304935;">Belanja Pegawai kosong di bulan ini</h5>
+                                    <p style="margin:0; color:#5e6f60;">Template sudah disiapkan. Saat data Belanja Pegawai terisi, grafik akan muncul otomatis.</p>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                @else
+                    <div class="placeholder-chart">
+                        <div>
+                            <div class="placeholder-badge">Belum ada bulan dipilih</div>
+                            @if (empty($monthOptions))
+                                <h5 style="margin:.75rem 0 .35rem; color:#304935;">Data bulanan belum ditemukan</h5>
+                                <p style="margin:0; color:#5e6f60;">Upload file Excel yang sesuai agar data bulanan bisa dipetakan ke grafik ini.</p>
+                            @else
+                                <h5 style="margin:.75rem 0 .35rem; color:#304935;">Pilih bulan terlebih dahulu</h5>
+                                <p style="margin:0; color:#5e6f60;">Begitu bulan dipilih, target dan realisasi Belanja Pegawai akan muncul di area ini.</p>
+                            @endif
+                        </div>
+                    </div>
+                @endif
+            @else
+                <div class="placeholder-chart">
+                    <div>
+                        <div class="placeholder-badge">Belum ada bulan dipilih</div>
+                        <h5 style="margin:.75rem 0 .35rem; color:#304935;">Data bulanan belum ditemukan</h5>
+                        <p style="margin:0; color:#5e6f60;">Upload file Excel yang sesuai agar data bulanan bisa dipetakan ke grafik ini.</p>
+                    </div>
+                </div>
+            @endif
+        </div>
+
+        <div class="panel chart-card">
+            <div class="panel-header">
+                <div>
+                    <div class="panel-title">Grafik 3</div>
+                    <div class="panel-small">Slot kosong untuk isi grafik berikutnya.</div>
+                </div>
+            </div>
+            <div class="placeholder-chart">
+                <div>
+                    <div class="placeholder-badge">Siap diisi</div>
+                    <h5 style="margin:.75rem 0 .35rem; color:#304935;">Grafik ketiga</h5>
+                    <p style="margin:0; color:#5e6f60;">Area ini sengaja dibuat kosong agar layout dashboard tetap rapi saat isi grafiknya belum ditentukan.</p>
+                </div>
             </div>
         </div>
 
-        <div class="reminder-card">
-            <div>
-                <h4>Meeting with Arc Company</h4>
-                <p>Time: 02:00 pm - 04:00 pm</p>
+        <div class="panel chart-card">
+            <div class="panel-header">
+                <div>
+                    <div class="panel-title">Grafik 4</div>
+                    <div class="panel-small">Slot kosong untuk isi grafik berikutnya.</div>
+                </div>
             </div>
-            <a href="#" class="btn-pill btn-primary-soft text-center w-100"><i class="bi bi-camera-video me-2"></i>Start Meeting</a>
+            <div class="placeholder-chart">
+                <div>
+                    <div class="placeholder-badge">Siap diisi</div>
+                    <h5 style="margin:.75rem 0 .35rem; color:#304935;">Grafik keempat</h5>
+                    <p style="margin:0; color:#5e6f60;">Anda bisa mengganti isi kartu ini kapan saja tanpa mengubah susunan dashboard.</p>
+                </div>
+            </div>
         </div>
     </div>
-</div>
+</section>
 
 @if (count($rows) > 0)
-<!-- Excel Data Section -->
 <div class="panel" style="margin-top: 2rem;">
     <div class="panel-header">
         <div>
@@ -261,7 +428,7 @@
                 @forelse ($rows as $index => $row)
                 <tr style="border-bottom: 1px solid #eee; {{ ($index + 1) % 2 === 0 ? 'background: #fafafa;' : '' }}">
                     <td style="padding: 0.75rem;">{{ $row['no'] ?? ($index + 1) }}</td>
-                    <td style="padding: 0.75rem;">{{ $row['sheet'] ?? '-' }}</td>
+                    <td style="padding: 0.75rem;"><span class="badge text-bg-light border">{{ $row['sheet'] ?? '-' }}</span></td>
                     <td style="padding: 0.75rem;">{{ $row['tim_display'] ?? '-' }}</td>
                     <td style="padding: 0.75rem; text-align: right;">{{ $row['nominal_rpd'] ?? '-' }}</td>
                     <td style="padding: 0.75rem; text-align: right;">{{ $row['deviasi'] ?? '-' }}</td>
@@ -270,9 +437,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" style="padding: 1.5rem; text-align: center; color: #999;">
-                        Tidak ada data yang ditemukan
-                    </td>
+                    <td colspan="7" style="padding: 1.5rem; text-align: center; color: #999;">Tidak ada data yang ditemukan</td>
                 </tr>
                 @endforelse
             </tbody>
@@ -281,44 +446,4 @@
 </div>
 @endif
 
-<div class="panel" style="margin-top: 2rem;">
-    <div class="panel-header">
-        <div>
-            <div class="panel-title">Project</div>
-            <div class="panel-small">Latest items from the dashboard queue.</div>
-        </div>
-        <a href="#" class="btn-pill btn-outline-soft py-2 px-3"><i class="bi bi-plus-lg me-2"></i>New</a>
-    </div>
-
-    <div class="project-list">
-        <div class="project-item">
-            <div class="project-dot" style="background:#3866ff;"><i class="bi bi-lightning-charge-fill"></i></div>
-            <div class="project-text">
-                <strong>Develop API Endpoints</strong>
-                <span>Due date: Nov 26, 2024</span>
-            </div>
-        </div>
-        <div class="project-item">
-            <div class="project-dot" style="background:#3bb3aa;"><i class="bi bi-circle-half"></i></div>
-            <div class="project-text">
-                <strong>Onboarding Flow</strong>
-                <span>Due date: Nov 28, 2024</span>
-            </div>
-        </div>
-        <div class="project-item">
-            <div class="project-dot" style="background:#1f6b45;"><i class="bi bi-kanban-fill"></i></div>
-            <div class="project-text">
-                <strong>Build Dashboard</strong>
-                <span>Due date: Nov 30, 2024</span>
-            </div>
-        </div>
-        <div class="project-item">
-            <div class="project-dot" style="background:#ffb02e;"><i class="bi bi-upload"></i></div>
-            <div class="project-text">
-                <strong>Optimize Page Load</strong>
-                <span>Due date: Dec 2, 2024</span>
-            </div>
-        </div>
-    </div>
-</div>
 @endsection

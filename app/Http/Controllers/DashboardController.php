@@ -20,11 +20,8 @@ class DashboardController extends Controller
         $selectedMonth = trim((string) $request->query('chart_month', ''));
         $monthOptions = array_map(static fn ($month) => $month['label'], $chart['months'] ?? []);
 
-        if ($selectedMonth !== '' && ! in_array($selectedMonth, $monthOptions, true)) {
-            $selectedMonth = '';
-        }
-
         $selectedMonthData = null;
+        $selectedMonthChart = null;
 
         if ($selectedMonth !== '') {
             foreach ($chart['months'] ?? [] as $month) {
@@ -33,15 +30,33 @@ class DashboardController extends Controller
                     break;
                 }
             }
+
+            if ($selectedMonthData === null) {
+                $selectedMonthChart = $this->buildOverviewChartDataForMonth($viewData['rows'], $selectedMonth);
+
+                if ($selectedMonthChart !== null) {
+                    $selectedMonthData = $selectedMonthChart['months'][0] ?? null;
+                }
+            }
+
+            if ($selectedMonthData === null && ! in_array($selectedMonth, $monthOptions, true)) {
+                $selectedMonth = '';
+            }
         }
+
+        $displayChart = $selectedMonthChart ?? $chart;
 
         return view('overview', [
             'rows' => $viewData['rows'],
             'fileName' => $viewData['fileName'],
             'analysis' => $viewData['analysis'],
-            'chart' => $chart,
+            'chart' => $displayChart,
+            'chartBelanjaBarang' => $displayChart,
+            'chartBelanjaPegawai' => $displayChart,
+            'monthOptions' => $monthOptions,
             'selectedMonth' => $selectedMonth,
-            'selectedMonthData' => $selectedMonthData,
+            'selectedMonthDataBarang' => $selectedMonthData,
+            'selectedMonthDataPegawai' => $selectedMonthData,
             'error' => null,
         ]);
     }
@@ -94,6 +109,7 @@ class DashboardController extends Controller
                 'excel_rows' => $viewData['rows'],
                 'excel_file_name' => $viewData['fileName'],
                 'excel_analysis' => $viewData['analysis'],
+                'excel_raw_sheets' => $viewData['rawSheets'],
             ]);
 
             return redirect()->route('keutata', ['upload' => $upload->id])->with('success', 'File Excel berhasil diupload dan dipelajari.');
@@ -105,12 +121,65 @@ class DashboardController extends Controller
     public function keutata(Request $request): View
     {
         $viewData = $this->resolveKeutataViewData($request->query('upload'));
+        $selectedMonth = trim((string) $request->query('month', ''));
+        $monthOptions = $this->extractRawSheetMonthOptions($viewData['rawSheets']);
+
+        if ($selectedMonth !== '' && ! in_array($selectedMonth, $monthOptions, true)) {
+            $selectedMonth = '';
+        }
+
+        $displayRawSheets = $selectedMonth === ''
+            ? $viewData['rawSheets']
+            : array_values(array_filter(
+                $viewData['rawSheets'],
+                static fn ($sheet) => ($sheet['month_label'] ?? '') === $selectedMonth
+            ));
+
+        $sheetOptions = array_map(
+            static fn ($sheet) => (string) ($sheet['sheet'] ?? ''),
+            $displayRawSheets
+        );
+        $sheetOptions = array_values(array_filter($sheetOptions, static fn ($name) => $name !== ''));
+
+        $selectedSheet = trim((string) $request->query('sheet', ''));
+
+        if ($selectedSheet !== '' && ! in_array($selectedSheet, $sheetOptions, true)) {
+            $selectedSheet = '';
+        }
+
+        $selectedSheetData = null;
+
+        if ($selectedSheet !== '') {
+            foreach ($displayRawSheets as $sheet) {
+                if (($sheet['sheet'] ?? '') === $selectedSheet) {
+                    $selectedSheetData = $sheet;
+                    break;
+                }
+            }
+        }
+
+        if ($selectedSheetData === null && count($sheetOptions) === 1) {
+            $selectedSheet = $sheetOptions[0];
+
+            foreach ($displayRawSheets as $sheet) {
+                if (($sheet['sheet'] ?? '') === $selectedSheet) {
+                    $selectedSheetData = $sheet;
+                    break;
+                }
+            }
+        }
 
         return view('keutata', [
             'rows' => $viewData['rows'],
             'fileName' => $viewData['fileName'],
             'error' => null,
             'analysis' => $viewData['analysis'],
+            'rawSheets' => $displayRawSheets,
+            'sheetOptions' => $sheetOptions,
+            'selectedSheet' => $selectedSheet,
+            'selectedSheetData' => $selectedSheetData,
+            'monthOptions' => $monthOptions,
+            'selectedMonth' => $selectedMonth,
             'success' => session('success'),
         ]);
     }
@@ -128,12 +197,14 @@ class DashboardController extends Controller
         $sessionRows = session('excel_rows');
         $sessionFileName = session('excel_file_name');
         $sessionAnalysis = session('excel_analysis');
+        $sessionRawSheets = session('excel_raw_sheets');
 
         if (is_array($sessionRows) && $sessionFileName !== null) {
             return [
                 'rows' => $sessionRows,
                 'fileName' => $sessionFileName,
                 'analysis' => is_array($sessionAnalysis) ? $sessionAnalysis : [],
+                'rawSheets' => is_array($sessionRawSheets) ? $sessionRawSheets : [],
             ];
         }
 
@@ -147,6 +218,7 @@ class DashboardController extends Controller
             'rows' => [],
             'fileName' => null,
             'analysis' => [],
+            'rawSheets' => [],
         ];
     }
 
@@ -159,11 +231,11 @@ class DashboardController extends Controller
                 'rows' => [],
                 'fileName' => $upload->file_name,
                 'analysis' => $upload->analysis_data ?? [],
+                'rawSheets' => [],
             ];
         }
 
         $spreadsheet = IOFactory::load($storagePath);
-
         return $this->buildKeutataViewData($spreadsheet, $upload->file_name);
     }
 
@@ -171,10 +243,12 @@ class DashboardController extends Controller
     {
         $rows = [];
         $analysis = [];
+        $rawSheets = [];
 
         foreach ($spreadsheet->getWorksheetIterator() as $sheet) {
             [$sheetRows, $sheetAnalysis] = $this->extractRowsFromSheet($sheet);
             $sheetRows = array_merge($sheetRows, $this->extractMonthlySummaryRows($sheet));
+            $rawSheets[] = $this->extractRawSheetData($sheet);
 
             $rows = array_merge($rows, $sheetRows);
             $analysis[] = $sheetAnalysis;
@@ -184,8 +258,188 @@ class DashboardController extends Controller
             'rows' => $rows,
             'fileName' => $fileName,
             'analysis' => $analysis,
+            'rawSheets' => $rawSheets,
             'error' => null,
         ];
+    }
+
+    private function extractRawSheetData($sheet): array
+    {
+        $sheetName = $sheet->getTitle();
+        $highestRow = (int) $sheet->getHighestDataRow();
+        $highestColumnIndex = Coordinate::columnIndexFromString($sheet->getHighestDataColumn());
+        $sheetMonth = $this->detectMonthFromText($sheetName);
+        $mergedRanges = $this->buildMergedRangesMap($sheet);
+
+        if ($highestRow < 1 || $highestColumnIndex < 1) {
+            return [
+                'sheet' => $sheetName,
+                'month_label' => $sheetMonth['label'] ?? 'Tanpa Bulan',
+                'columns' => [],
+                'rows' => [],
+            ];
+        }
+
+        $columns = [];
+        for ($column = 1; $column <= $highestColumnIndex; $column++) {
+            $columns[] = Coordinate::stringFromColumnIndex($column);
+        }
+
+        $rows = [];
+        for ($row = 1; $row <= $highestRow; $row++) {
+            $cells = [];
+            $hasValue = false;
+
+            for ($column = 1; $column <= $highestColumnIndex; $column++) {
+                $cellAddress = Coordinate::stringFromColumnIndex($column).$row;
+                $value = $this->readCellDisplayValue($sheet, $cellAddress);
+
+                if (trim($value) === '') {
+                    $value = $this->resolveMergedCellDisplayValue($sheet, $mergedRanges, $row, $column);
+                }
+
+                $cells[] = $value;
+
+                if (trim($value) !== '') {
+                    $hasValue = true;
+                }
+
+                if (
+                    $sheetMonth === null &&
+                    $row <= min(20, $highestRow) &&
+                    $column <= min(12, $highestColumnIndex) &&
+                    trim($value) !== ''
+                ) {
+                    $detectedMonth = $this->detectMonthFromText($value);
+
+                    if ($detectedMonth !== null) {
+                        $sheetMonth = $detectedMonth;
+                    }
+                }
+            }
+
+            if (! $hasValue) {
+                continue;
+            }
+
+            $rows[] = [
+                'row_number' => $row,
+                'cells' => $cells,
+            ];
+        }
+
+        return [
+            'sheet' => $sheetName,
+            'month_label' => $sheetMonth['label'] ?? 'Tanpa Bulan',
+            'columns' => $columns,
+            'rows' => $rows,
+        ];
+    }
+
+    private function extractRawSheetMonthOptions(array $rawSheets): array
+    {
+        $priority = [
+            'Januari' => 1,
+            'Februari' => 2,
+            'Maret' => 3,
+            'April' => 4,
+            'Mei' => 5,
+            'Juni' => 6,
+            'Juli' => 7,
+            'Agustus' => 8,
+            'September' => 9,
+            'Oktober' => 10,
+            'November' => 11,
+            'Desember' => 12,
+            'Tanpa Bulan' => 99,
+        ];
+
+        $labels = [];
+
+        foreach ($rawSheets as $sheet) {
+            $label = trim((string) ($sheet['month_label'] ?? 'Tanpa Bulan'));
+            $labels[$label] = true;
+        }
+
+        $result = array_keys($labels);
+
+        usort($result, static function ($a, $b) use ($priority) {
+            $weightA = $priority[$a] ?? 98;
+            $weightB = $priority[$b] ?? 98;
+
+            if ($weightA === $weightB) {
+                return strcmp($a, $b);
+            }
+
+            return $weightA <=> $weightB;
+        });
+
+        return $result;
+    }
+
+    private function readCellDisplayValue($sheet, string $cellAddress): string
+    {
+        $cell = $sheet->getCell($cellAddress);
+
+        try {
+            $rawValue = $cell->getValue();
+            if (is_string($rawValue) && str_starts_with($rawValue, '=')) {
+                $calculated = $cell->getCalculatedValue();
+
+                if (is_scalar($calculated) || $calculated === null) {
+                    return (string) ($calculated ?? '');
+                }
+            }
+        } catch (Throwable $e) {
+            // Fallback to formatted value when formula calculation is unavailable.
+        }
+
+        return (string) $cell->getFormattedValue();
+    }
+
+    private function buildMergedRangesMap($sheet): array
+    {
+        $ranges = [];
+
+        foreach ($sheet->getMergeCells() as $range) {
+            $boundaries = Coordinate::rangeBoundaries($range);
+
+            if (count($boundaries) !== 2) {
+                continue;
+            }
+
+            $start = $boundaries[0];
+            $end = $boundaries[1];
+            $topLeftAddress = Coordinate::stringFromColumnIndex($start[0]).$start[1];
+
+            $ranges[] = [
+                'start_col' => (int) $start[0],
+                'start_row' => (int) $start[1],
+                'end_col' => (int) $end[0],
+                'end_row' => (int) $end[1],
+                'top_left' => $topLeftAddress,
+            ];
+        }
+
+        return $ranges;
+    }
+
+    private function resolveMergedCellDisplayValue($sheet, array $mergedRanges, int $row, int $column): string
+    {
+        foreach ($mergedRanges as $range) {
+            if (
+                $column < $range['start_col'] ||
+                $column > $range['end_col'] ||
+                $row < $range['start_row'] ||
+                $row > $range['end_row']
+            ) {
+                continue;
+            }
+
+            return $this->readCellDisplayValue($sheet, $range['top_left']);
+        }
+
+        return '';
     }
 
     private function extractRowsFromSheet($sheet): array
@@ -501,6 +755,117 @@ class DashboardController extends Controller
         ];
     }
 
+    private function buildOverviewChartDataForMonth(array $rows, string $selectedMonth): ?array
+    {
+        $targetMonth = $this->detectMonthFromText($selectedMonth);
+
+        if ($targetMonth === null) {
+            return null;
+        }
+
+        $monthData = [
+            'month' => $targetMonth['label'],
+            'order' => $targetMonth['order'],
+            'teams' => [],
+        ];
+
+        foreach ($rows as $row) {
+            $periodLabel = trim((string) ($row['periode'] ?? ''));
+            $sheetLabel = trim((string) ($row['sheet'] ?? ''));
+
+            $monthMeta = $this->detectMonthFromText($periodLabel);
+
+            if ($monthMeta === null && $sheetLabel !== '') {
+                $monthMeta = $this->detectMonthFromText($sheetLabel);
+            }
+
+            if ($monthMeta === null || $monthMeta['label'] !== $targetMonth['label']) {
+                continue;
+            }
+
+            $team = $this->resolveTeamLabel($row);
+
+            if ($team === null) {
+                continue;
+            }
+
+            $targetRaw = trim((string) ($row['target'] ?? ''));
+            $realisasiRaw = trim((string) ($row['realisasi'] ?? ''));
+
+            if ($targetRaw === '') {
+                $targetRaw = trim((string) ($row['nominal_rpd'] ?? ''));
+            }
+
+            if ($realisasiRaw === '') {
+                $realisasiRaw = trim((string) ($row['nominal_pengajuan'] ?? ''));
+            }
+
+            $targetValue = $this->normalizeToNumber($targetRaw);
+            $realisasiValue = $this->normalizeToNumber($realisasiRaw);
+
+            if ($targetValue === null && $realisasiValue === null) {
+                continue;
+            }
+
+            if (! isset($monthData['teams'][$team])) {
+                $monthData['teams'][$team] = [
+                    'label' => $team,
+                    'target' => 0.0,
+                    'realisasi' => 0.0,
+                ];
+            }
+
+            $monthData['teams'][$team]['target'] += $targetValue ?? 0.0;
+            $monthData['teams'][$team]['realisasi'] += $realisasiValue ?? 0.0;
+        }
+
+        if ($monthData['teams'] === []) {
+            return null;
+        }
+
+        $teams = array_values($monthData['teams']);
+        usort($teams, static fn ($a, $b) => $b['target'] <=> $a['target']);
+
+        $monthTotalTarget = 0.0;
+        $monthTotalRealisasi = 0.0;
+
+        foreach ($teams as &$team) {
+            $monthTotalTarget += $team['target'];
+            $monthTotalRealisasi += $team['realisasi'];
+        }
+        unset($team);
+
+        $maxScale = 0.0;
+
+        if ($teams !== []) {
+            $maxScale = max(array_map(static fn ($team) => max($team['target'], $team['realisasi']), $teams));
+        }
+
+        foreach ($teams as &$team) {
+            $team['target_formatted'] = number_format($team['target'], 0, ',', '.');
+            $team['realisasi_formatted'] = number_format($team['realisasi'], 0, ',', '.');
+            $team['ratio'] = $team['target'] > 0 ? min(100, ($team['realisasi'] / $team['target']) * 100) : 0;
+            $team['target_bar_height'] = $maxScale > 0 ? max(12, (int) round(($team['target'] / $maxScale) * 150)) : 12;
+            $team['realisasi_bar_height'] = $maxScale > 0 ? max(12, (int) round(($team['realisasi'] / $maxScale) * 150)) : 12;
+        }
+        unset($team);
+
+        $monthRatio = $monthTotalTarget > 0 ? ($monthTotalRealisasi / $monthTotalTarget) * 100 : 0;
+
+        return [
+            'months' => [[
+                'label' => $monthData['month'],
+                'teams' => array_slice($teams, 0, 8),
+                'total_target_formatted' => number_format($monthTotalTarget, 0, ',', '.'),
+                'total_realisasi_formatted' => number_format($monthTotalRealisasi, 0, ',', '.'),
+                'ratio' => max(0, min(100, round($monthRatio, 2))),
+            ]],
+            'total_target_formatted' => number_format($monthTotalTarget, 0, ',', '.'),
+            'total_realisasi_formatted' => number_format($monthTotalRealisasi, 0, ',', '.'),
+            'overall_ratio' => max(0, min(100, round($monthRatio, 2))),
+        ];
+    }
+
     private function detectMonthFromText(string $text): ?array
     {
         $normalized = strtolower(preg_replace('/[^a-z0-9]+/i', '', $text) ?? '');
@@ -710,6 +1075,7 @@ class DashboardController extends Controller
                 'excel_rows' => $viewData['rows'],
                 'excel_file_name' => $viewData['fileName'],
                 'excel_analysis' => $viewData['analysis'],
+                'excel_raw_sheets' => $viewData['rawSheets'],
             ]);
 
             return redirect()->route('keutata', ['upload' => $upload->id])->with('success', 'File dari arsip berhasil dimuat: '.$upload->file_name);
@@ -718,5 +1084,84 @@ class DashboardController extends Controller
         }
     }
 
+    public function archiveDelete(Request $request, $id): RedirectResponse
+    {
+        $upload = Upload::find($id);
+
+        if (! $upload) {
+            return redirect()->route('archive')->with('error', 'File tidak ditemukan.');
+        }
+
+        try {
+            // Try deleting via storage disk first
+            if (Storage::disk('local')->exists($upload->file_path)) {
+                Storage::disk('local')->delete($upload->file_path);
+            } elseif (Storage::disk('local')->exists('private/'.$upload->file_path)) {
+                Storage::disk('local')->delete('private/'.$upload->file_path);
+            } else {
+                $path = storage_path('app/private/'.$upload->file_path);
+                if (file_exists($path)) {
+                    @unlink($path);
+                }
+            }
+
+            $upload->delete();
+
+            return redirect()->route('archive')->with('success', 'File berhasil dihapus dari arsip.');
+        } catch (Throwable $e) {
+            return redirect()->route('archive')->with('error', 'Gagal menghapus file: '.$e->getMessage());
+        }
+    }
+
+    public function archiveBulkDelete(Request $request): RedirectResponse
+    {
+        $ids = $request->input('ids');
+
+        if (! $ids) {
+            return redirect()->route('archive')->with('error', 'Tidak ada file yang dipilih.');
+        }
+
+        $idArray = explode(',', $ids);
+        $idArray = array_map('trim', $idArray);
+        $idArray = array_filter($idArray);
+
+        $uploads = Upload::whereIn('id', $idArray)->get();
+
+        if ($uploads->isEmpty()) {
+            return redirect()->route('archive')->with('error', 'File tidak ditemukan.');
+        }
+
+        $deletedCount = 0;
+        $errors = [];
+
+        foreach ($uploads as $upload) {
+            try {
+                // Try deleting via storage disk first
+                if (Storage::disk('local')->exists($upload->file_path)) {
+                    Storage::disk('local')->delete($upload->file_path);
+                } elseif (Storage::disk('local')->exists('private/'.$upload->file_path)) {
+                    Storage::disk('local')->delete('private/'.$upload->file_path);
+                } else {
+                    $path = storage_path('app/private/'.$upload->file_path);
+                    if (file_exists($path)) {
+                        @unlink($path);
+                    }
+                }
+
+                $upload->delete();
+                $deletedCount++;
+            } catch (Throwable $e) {
+                $errors[] = $upload->file_name.': '.$e->getMessage();
+            }
+        }
+
+        $message = $deletedCount.' file berhasil dihapus.';
+        if (! empty($errors)) {
+            $message .= ' '.count($errors).' file gagal dihapus.';
+        }
+
+        return redirect()->route('archive')->with('success', $message);
+    }
 
 }
+
