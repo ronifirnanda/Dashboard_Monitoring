@@ -18,6 +18,8 @@ class DashboardController extends Controller
         $viewData = $this->resolveKeutataViewData($request->query('upload'));
         $chartBelanjaBarang = $this->buildBelanjaChartDataFromRawSheets($viewData['rawSheets'], 'belanja barang');
         $chartBelanjaPegawai = $this->buildBelanjaChartDataFromRawSheets($viewData['rawSheets'], 'belanja pegawai');
+        $chartRekapAnggaranPerTim = $this->buildRekapAnggaranPerTimChartData($viewData['rawSheets']);
+        $chartLaporanPenyerapanAnggaran = $this->buildLaporanPenyerapanAnggaranChartData($viewData['rawSheets']);
         $selectedMonth = trim((string) $request->query('chart_month', ''));
         $monthOptions = array_values(array_filter(
             $this->extractRawSheetMonthOptions($viewData['rawSheets']),
@@ -57,6 +59,8 @@ class DashboardController extends Controller
             'analysis' => $viewData['analysis'],
             'chartBelanjaBarang' => $chartBelanjaBarang,
             'chartBelanjaPegawai' => $chartBelanjaPegawai,
+            'chartRekapAnggaranPerTim' => $chartRekapAnggaranPerTim,
+            'chartLaporanPenyerapanAnggaran' => $chartLaporanPenyerapanAnggaran,
             'monthOptions' => $monthOptions,
             'selectedMonth' => $selectedMonth,
             'selectedMonthDataBarang' => $selectedMonthDataBarang,
@@ -503,6 +507,159 @@ class DashboardController extends Controller
             'total_target_formatted' => number_format($grandTotalTarget, 0, ',', '.'),
             'total_realisasi_formatted' => number_format($grandTotalRealisasi, 0, ',', '.'),
             'overall_ratio' => max(0, min(100, round($overallRatio, 2))),
+        ];
+    }
+
+    private function buildRekapAnggaranPerTimChartData(array $rawSheets): array
+    {
+        $sheetData = null;
+
+        foreach ($rawSheets as $rawSheet) {
+            $sheetName = trim((string) ($rawSheet['sheet'] ?? ''));
+
+            if (strcasecmp($sheetName, 'Rekap anggaran per tim') === 0) {
+                $sheetData = $rawSheet;
+                break;
+            }
+        }
+
+        if ($sheetData === null) {
+            return [
+                'label' => 'Rekap anggaran per tim',
+                'teams' => [],
+                'total_formatted' => number_format(0, 0, ',', '.'),
+                'team_count' => 0,
+                'highest_formatted' => number_format(0, 0, ',', '.'),
+            ];
+        }
+
+        $teams = [];
+
+        foreach (($sheetData['rows'] ?? []) as $rowData) {
+            $cells = $rowData['cells'] ?? [];
+
+            $team = trim((string) ($cells[3] ?? ''));
+            $nominal = trim((string) ($cells[4] ?? ''));
+
+            if ($team === '' || $nominal === '') {
+                continue;
+            }
+
+            if (preg_match('/^(nominal|total|jumlah)$/i', $team) === 1) {
+                continue;
+            }
+
+            $value = $this->normalizeToNumber($nominal);
+
+            if ($value === null) {
+                continue;
+            }
+
+            if (! isset($teams[$team])) {
+                $teams[$team] = [
+                    'label' => $team,
+                    'value' => 0.0,
+                ];
+            }
+
+            $teams[$team]['value'] += $value;
+        }
+
+        $teams = array_values($teams);
+
+        if ($teams === []) {
+            return [
+                'label' => 'Rekap anggaran per tim',
+                'teams' => [],
+                'total_formatted' => number_format(0, 0, ',', '.'),
+                'team_count' => 0,
+                'highest_formatted' => number_format(0, 0, ',', '.'),
+            ];
+        }
+
+        usort($teams, static fn ($a, $b) => $b['value'] <=> $a['value']);
+
+        $total = 0.0;
+        $highest = 0.0;
+
+        foreach ($teams as &$team) {
+            $total += $team['value'];
+            $highest = max($highest, $team['value']);
+        }
+        unset($team);
+
+        foreach ($teams as &$team) {
+            $team['formatted'] = number_format($team['value'], 0, ',', '.');
+            $team['bar_height'] = $highest > 0 ? max(18, (int) round(($team['value'] / $highest) * 160)) : 18;
+        }
+        unset($team);
+
+        return [
+            'label' => 'Rekap anggaran per tim',
+            'teams' => array_slice($teams, 0, 8),
+            'total_formatted' => number_format($total, 0, ',', '.'),
+            'team_count' => count($teams),
+            'highest_formatted' => number_format($highest, 0, ',', '.'),
+        ];
+    }
+
+    private function buildLaporanPenyerapanAnggaranChartData(array $rawSheets): array
+    {
+        foreach ($rawSheets as $rawSheet) {
+            $sheetName = trim((string) ($rawSheet['sheet'] ?? ''));
+
+            if (strcasecmp($sheetName, 'Laporan penyerapan anggaran') !== 0) {
+                continue;
+            }
+
+            $rows = $rawSheet['rows'] ?? [];
+            $available = null;
+            $realisasi = null;
+            $ratio = null;
+
+            // Find header row with "anggaran tersedia"
+            foreach ($rows as $index => $rowData) {
+                $cells = $rowData['cells'] ?? [];
+                $headerCell = strtolower(trim((string) ($cells[1] ?? '')));
+
+                if ($headerCell === 'anggaran tersedia') {
+                    // Next row has the data
+                    if (isset($rows[$index + 1])) {
+                        $dataCells = $rows[$index + 1]['cells'] ?? [];
+                        $available = $this->normalizeToNumber(trim((string) ($dataCells[1] ?? '')));
+                        $realisasi = $this->normalizeToNumber(trim((string) ($dataCells[2] ?? '')));
+                    }
+                    break;
+                }
+            }
+
+            if ($available !== null && $realisasi !== null && $available > 0) {
+                $ratio = max(0, min(100, round(($realisasi / $available) * 100, 2)));
+            }
+
+            return [
+                'label' => 'Progres Penyerapan Anggaran',
+                'available' => $available ?? 0.0,
+                'realisasi' => $realisasi ?? 0.0,
+                'ratio' => $ratio ?? 0,
+                'available_formatted' => number_format((float) ($available ?? 0), 0, ',', '.'),
+                'realisasi_formatted' => number_format((float) ($realisasi ?? 0), 0, ',', '.'),
+                'bar_height_available' => $available !== null ? 160 : 18,
+                'bar_height_realisasi' => $realisasi !== null && $available !== null && $available > 0
+                    ? max(18, (int) round((($realisasi / $available) * 160)))
+                    : 18,
+            ];
+        }
+
+        return [
+            'label' => 'Progres Penyerapan Anggaran',
+            'available' => 0.0,
+            'realisasi' => 0.0,
+            'ratio' => 0,
+            'available_formatted' => number_format(0, 0, ',', '.'),
+            'realisasi_formatted' => number_format(0, 0, ',', '.'),
+            'bar_height_available' => 18,
+            'bar_height_realisasi' => 18,
         ];
     }
 

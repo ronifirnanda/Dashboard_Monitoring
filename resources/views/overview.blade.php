@@ -288,56 +288,74 @@
                 </div>
             </div>
 
-            <div class="metric-grid">
-                <div class="metric-box">
-                    <div class="metric-label">Total Target</div>
-                    <div class="metric-value">{{ $chartBelanjaPegawai['total_target_formatted'] }}</div>
+            <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:.8rem; margin-top:.75rem; margin-bottom:1rem;">
+                <div style="padding:.85rem 1rem .9rem; border:1px solid #dfeee1; border-radius:14px; background:#fbfefb; box-shadow:0 8px 16px rgba(31,107,69,.05); min-height:74px; display:flex; flex-direction:column; justify-content:center;">
+                    <div style="font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:#7a8a7d; line-height:1; margin-bottom:.3rem;">Total Target</div>
+                    <div style="font-size:1.1rem; font-weight:800; color:#203d2a; line-height:1.05;">{{ $chartBelanjaPegawai['total_target_formatted'] }}</div>
                 </div>
-                <div class="metric-box">
-                    <div class="metric-label">Total Realisasi</div>
-                    <div class="metric-value">{{ $chartBelanjaPegawai['total_realisasi_formatted'] }}</div>
+                <div style="padding:.85rem 1rem .9rem; border:1px solid #dfeee1; border-radius:14px; background:#fbfefb; box-shadow:0 8px 16px rgba(31,107,69,.05); min-height:74px; display:flex; flex-direction:column; justify-content:center;">
+                    <div style="font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:#7a8a7d; line-height:1; margin-bottom:.3rem;">Total Realisasi</div>
+                    <div style="font-size:1.1rem; font-weight:800; color:#203d2a; line-height:1.05;">{{ $chartBelanjaPegawai['total_realisasi_formatted'] }}</div>
                 </div>
-                <div class="metric-box">
-                    <div class="metric-label">Serapan Rata-rata</div>
-                    <div class="metric-value">{{ number_format($chartBelanjaPegawai['overall_ratio'], 2, ',', '.') }}%</div>
+                <div style="padding:.85rem 1rem .9rem; border:1px solid #dfeee1; border-radius:14px; background:#fbfefb; box-shadow:0 8px 16px rgba(31,107,69,.05); min-height:74px; display:flex; flex-direction:column; justify-content:center;">
+                    <div style="font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:#7a8a7d; line-height:1; margin-bottom:.3rem;">Serapan Rata-rata</div>
+                    <div style="font-size:1.1rem; font-weight:800; color:#203d2a; line-height:1.05;">{{ number_format($chartBelanjaPegawai['overall_ratio'], 2, ',', '.') }}%</div>
                 </div>
             </div>
 
             @if (!empty($monthOptions) || !empty($selectedMonthDataPegawai))
                 @if (!empty($selectedMonthDataPegawai))
-                    <div class="chart-shell">
-                        <div style="display:flex; justify-content:space-between; align-items:center; gap:.75rem; margin-bottom:.8rem; flex-wrap:wrap;">
-                            <h5 style="margin:0; color:#304935;">{{ $selectedMonthDataPegawai['label'] }}</h5>
-                            <div style="font-size:.82rem; color:#5e6f60;">
-                                {{ $selectedMonthDataPegawai['total_realisasi_formatted'] }} / {{ $selectedMonthDataPegawai['total_target_formatted'] }}
-                                ({{ number_format($selectedMonthDataPegawai['ratio'], 2, ',', '.') }}%)
+                    <div style="margin-top:.75rem; padding:1rem; border:1px solid #dfeee1; border-radius:14px; background:#fbfefb;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:.75rem; flex-wrap:wrap;">
+                            <div>
+                                <h5 style="margin:0; color:#304935; font-size:1.05rem; font-weight:700;">{{ $selectedMonthDataPegawai['label'] }}</h5>
+                                <div style="font-size:.78rem; color:#7a8a7d;">Pilih bulan untuk menampilkan grafik bulan tersebut.</div>
+                            </div>
+                            <div style="font-size:.8rem; color:#6b7c72; text-align:right;">
+                                <div>{{ $selectedMonthDataPegawai['total_realisasi_formatted'] }} / {{ $selectedMonthDataPegawai['total_target_formatted'] }}</div>
+                                <div style="font-weight:700; color:#304935;">({{ number_format($selectedMonthDataPegawai['ratio'], 2, ',', '.') }}%)</div>
                             </div>
                         </div>
 
+                        <div style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap; margin-bottom:1rem; font-size:.8rem; color:#516553;">
+                            <span style="display:inline-flex; align-items:center; gap:.4rem;"><span style="width:10px; height:10px; border-radius:50%; background:#38503f; display:inline-block;"></span>Target</span>
+                            <span style="display:inline-flex; align-items:center; gap:.4rem;"><span style="width:10px; height:10px; border-radius:50%; background:#8bc19a; display:inline-block;"></span>Realisasi</span>
+                        </div>
+
                         @if (!empty($selectedMonthDataPegawai['teams']))
-                            <div class="chart-bars" style="grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); height: 190px; align-items:flex-end; margin-bottom:.8rem;">
+                            <div style="display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-end; justify-content:flex-start; padding-bottom:.75rem; border-bottom:1px solid #e8efe9;">
                                 @foreach ($selectedMonthDataPegawai['teams'] as $team)
-                                    <div class="bar-wrap" title="{{ $team['label'] }} | Target: {{ $team['target_formatted'] }} | Realisasi: {{ $team['realisasi_formatted'] }}">
-                                        <div style="display:flex; align-items:flex-end; justify-content:center; gap:8px; width:100%; height:160px;">
-                                            <div style="display:flex; flex-direction:column; align-items:center; gap:6px; flex:1;">
-                                                <div class="bar filled" style="width:100%; height: {{ $team['target_bar_height'] }}px; background: linear-gradient(180deg, #38503f 0%, #4b6a56 100%);"></div>
-                                                <span style="font-size:10px; color:#6b7c72;">T</span>
+                                    <div style="width:92px; flex:0 0 auto; text-align:center;">
+                                        <div style="display:flex; align-items:flex-end; justify-content:center; gap:8px; height:150px; margin-bottom:.45rem;">
+                                            <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1;">
+                                                <div style="width:16px; border-radius:12px 12px 4px 4px; height: {{ $team['target_bar_height'] }}px; background: linear-gradient(180deg, #38503f 0%, #4b6a56 100%); box-shadow: 0 6px 14px rgba(56,80,63,.14);"></div>
+                                                <span style="font-size:10px; color:#9aa8a0; line-height:1;">T</span>
                                             </div>
-                                            <div style="display:flex; flex-direction:column; align-items:center; gap:6px; flex:1;">
-                                                <div class="bar filled" style="width:100%; height: {{ $team['realisasi_bar_height'] }}px; background: linear-gradient(180deg, #8bc19a 0%, #6fa47f 100%);"></div>
-                                                <span style="font-size:10px; color:#6b7c72;">R</span>
+                                            <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1;">
+                                                <div style="width:16px; border-radius:12px 12px 4px 4px; height: {{ $team['realisasi_bar_height'] }}px; background: linear-gradient(180deg, #8bc19a 0%, #6fa47f 100%); box-shadow: 0 6px 14px rgba(77,159,96,.14);"></div>
+                                                <span style="font-size:10px; color:#9aa8a0; line-height:1;">R</span>
                                             </div>
                                         </div>
-                                        <div class="day" style="max-width:72px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ $team['label'] }}</div>
-                                        <div style="display:flex; justify-content:space-between; align-items:center; gap:.5rem; font-size:.8rem; color:#516553; margin-top:.35rem;">
-                                            <span style="font-weight:700; color:#304935;">{{ $team['realisasi_formatted'] }} / {{ $team['target_formatted'] }}</span>
-                                            <span>{{ number_format($team['ratio'], 2, ',', '.') }}%</span>
+                                        <div style="font-size:.8rem; color:#7a8a7d; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ $team['label'] }}</div>
+                                    </div>
+                                @endforeach
+                            </div>
+
+                            <div style="display:grid; gap:.55rem; margin-top:1rem;">
+                                @foreach ($selectedMonthDataPegawai['teams'] as $team)
+                                    <div>
+                                        <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:.25rem; font-size:.8rem; color:#5e6f60;">
+                                            <strong style="color:#304935; font-size:.82rem;">{{ $team['label'] }}</strong>
+                                            <span>{{ $team['realisasi_formatted'] }} / {{ $team['target_formatted'] }} ({{ number_format($team['ratio'], 2, ',', '.') }}%)</span>
+                                        </div>
+                                        <div style="height:8px; border-radius:999px; background:#e8efe9; overflow:hidden;">
+                                            <div style="height:100%; width: {{ $team['ratio'] }}%; background: linear-gradient(90deg, #38503f 0%, #8bc19a 100%);"></div>
                                         </div>
                                     </div>
                                 @endforeach
                             </div>
                         @else
-                            <div class="placeholder-chart">
+                            <div class="placeholder-chart" style="min-height:220px;">
                                 <div>
                                     <div class="placeholder-badge">Data belum tersedia</div>
                                     <h5 style="margin:.75rem 0 .35rem; color:#304935;">Belanja Pegawai kosong di bulan ini</h5>
@@ -374,33 +392,124 @@
         <div class="panel chart-card">
             <div class="panel-header">
                 <div>
-                    <div class="panel-title">Grafik 3</div>
-                    <div class="panel-small">Slot kosong untuk isi grafik berikutnya.</div>
+                    <div class="panel-title">Grafik 3 - Rekap Anggaran per Tim</div>
+                    <div class="panel-small">Rekap anggaran tahunan per tim dari sheet workbook.</div>
                 </div>
             </div>
-            <div class="placeholder-chart">
-                <div>
-                    <div class="placeholder-badge">Siap diisi</div>
-                    <h5 style="margin:.75rem 0 .35rem; color:#304935;">Grafik ketiga</h5>
-                    <p style="margin:0; color:#5e6f60;">Area ini sengaja dibuat kosong agar layout dashboard tetap rapi saat isi grafiknya belum ditentukan.</p>
+            @if (!empty($chartRekapAnggaranPerTim['teams']))
+                <div style="padding:1rem 1rem 1.1rem;">
+                    <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:.8rem; margin-bottom:1rem;">
+                        <div style="padding:.85rem 1rem .9rem; border:1px solid #dfeee1; border-radius:14px; background:#fbfefb; box-shadow:0 8px 16px rgba(31,107,69,.05); min-height:74px; display:flex; flex-direction:column; justify-content:center;">
+                            <div style="font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:#7a8a7d; line-height:1; margin-bottom:.3rem;">Total Anggaran</div>
+                            <div style="font-size:1.1rem; font-weight:800; color:#203d2a; line-height:1.05;">{{ $chartRekapAnggaranPerTim['total_formatted'] }}</div>
+                        </div>
+                        <div style="padding:.85rem 1rem .9rem; border:1px solid #dfeee1; border-radius:14px; background:#fbfefb; box-shadow:0 8px 16px rgba(31,107,69,.05); min-height:74px; display:flex; flex-direction:column; justify-content:center;">
+                            <div style="font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:#7a8a7d; line-height:1; margin-bottom:.3rem;">Jumlah Tim</div>
+                            <div style="font-size:1.1rem; font-weight:800; color:#203d2a; line-height:1.05;">{{ $chartRekapAnggaranPerTim['team_count'] }}</div>
+                        </div>
+                        <div style="padding:.85rem 1rem .9rem; border:1px solid #dfeee1; border-radius:14px; background:#fbfefb; box-shadow:0 8px 16px rgba(31,107,69,.05); min-height:74px; display:flex; flex-direction:column; justify-content:center;">
+                            <div style="font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:#7a8a7d; line-height:1; margin-bottom:.3rem;">Anggaran Tertinggi</div>
+                            <div style="font-size:1.1rem; font-weight:800; color:#203d2a; line-height:1.05;">{{ $chartRekapAnggaranPerTim['highest_formatted'] }}</div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-end; justify-content:flex-start; padding-bottom:.75rem; border-bottom:1px solid #e8efe9;">
+                        @foreach ($chartRekapAnggaranPerTim['teams'] as $team)
+                            <div style="width:92px; flex:0 0 auto; text-align:center;">
+                                <div style="display:flex; align-items:flex-end; justify-content:center; gap:8px; height:180px; margin-bottom:.45rem;">
+                                    <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1;">
+                                        <div style="width:20px; border-radius:12px 12px 4px 4px; height: {{ $team['bar_height'] }}px; background: linear-gradient(180deg, #1f6b45 0%, #2f8b59 100%); box-shadow: 0 6px 14px rgba(31,107,69,.14);"></div>
+                                    </div>
+                                </div>
+                                <div style="font-size:.8rem; color:#7a8a7d; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ $team['label'] }}</div>
+                                <div style="font-size:.78rem; color:#304935; font-weight:700; margin-top:.25rem;">{{ $team['formatted'] }}</div>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <div style="display:grid; gap:.55rem; margin-top:1rem;">
+                        @foreach ($chartRekapAnggaranPerTim['teams'] as $team)
+                            <div>
+                                <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:.25rem; font-size:.8rem; color:#5e6f60;">
+                                    <strong style="color:#304935; font-size:.82rem;">{{ $team['label'] }}</strong>
+                                    <span>{{ $team['formatted'] }}</span>
+                                </div>
+                                <div style="height:8px; border-radius:999px; background:#e8efe9; overflow:hidden;">
+                                    <div style="height:100%; width: {{ $team['bar_height'] / 1.6 }}%; background: linear-gradient(90deg, var(--chart-forest) 0%, var(--chart-leaf) 100%);"></div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
                 </div>
-            </div>
+            @else
+                <div class="placeholder-chart">
+                    <div>
+                        <div class="placeholder-badge">Data belum tersedia</div>
+                        <h5 style="margin:.75rem 0 .35rem; color:#304935;">Rekap anggaran per tim kosong</h5>
+                        <p style="margin:0; color:#5e6f60;">Sheet rekap anggaran tidak ditemukan atau belum punya nilai yang bisa dibaca.</p>
+                    </div>
+                </div>
+            @endif
         </div>
 
         <div class="panel chart-card">
             <div class="panel-header">
                 <div>
-                    <div class="panel-title">Grafik 4</div>
-                    <div class="panel-small">Slot kosong untuk isi grafik berikutnya.</div>
+                    <div class="panel-title">Grafik 4 - Laporan Penyerapan Anggaran</div>
+                    <div class="panel-small">Progres penyerapan anggaran dari sheet workbook.</div>
                 </div>
             </div>
-            <div class="placeholder-chart">
-                <div>
-                    <div class="placeholder-badge">Siap diisi</div>
-                    <h5 style="margin:.75rem 0 .35rem; color:#304935;">Grafik keempat</h5>
-                    <p style="margin:0; color:#5e6f60;">Anda bisa mengganti isi kartu ini kapan saja tanpa mengubah susunan dashboard.</p>
+            @if (!empty($chartLaporanPenyerapanAnggaran['available']) || !empty($chartLaporanPenyerapanAnggaran['realisasi']))
+                <div style="padding:1rem;">
+                    <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:.8rem; margin-bottom:1rem;">
+                        <div style="padding:.85rem 1rem .9rem; border:1px solid #dfeee1; border-radius:14px; background:#fbfefb; box-shadow:0 8px 16px rgba(31,107,69,.05); min-height:74px; display:flex; flex-direction:column; justify-content:center;">
+                            <div style="font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:#7a8a7d; line-height:1; margin-bottom:.3rem;">Anggaran Tersedia</div>
+                            <div style="font-size:1.1rem; font-weight:800; color:#203d2a; line-height:1.05;">{{ $chartLaporanPenyerapanAnggaran['available_formatted'] }}</div>
+                        </div>
+                        <div style="padding:.85rem 1rem .9rem; border:1px solid #dfeee1; border-radius:14px; background:#fbfefb; box-shadow:0 8px 16px rgba(31,107,69,.05); min-height:74px; display:flex; flex-direction:column; justify-content:center;">
+                            <div style="font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:#7a8a7d; line-height:1; margin-bottom:.3rem;">Realisasi s.d. April</div>
+                            <div style="font-size:1.1rem; font-weight:800; color:#203d2a; line-height:1.05;">{{ $chartLaporanPenyerapanAnggaran['realisasi_formatted'] }}</div>
+                        </div>
+                        <div style="padding:.85rem 1rem .9rem; border:1px solid #dfeee1; border-radius:14px; background:#fbfefb; box-shadow:0 8px 16px rgba(31,107,69,.05); min-height:74px; display:flex; flex-direction:column; justify-content:center;">
+                            <div style="font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:#7a8a7d; line-height:1; margin-bottom:.3rem;">Serapan</div>
+                            <div style="font-size:1.1rem; font-weight:800; color:#203d2a; line-height:1.05;">{{ number_format($chartLaporanPenyerapanAnggaran['ratio'], 2, ',', '.') }}%</div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; min-height:210px; padding:1rem 1rem .5rem; border:1px solid #dfeee1; border-radius:14px; background:#fbfefb;">
+                        <div style="flex:1; text-align:center;">
+                            <div style="display:flex; align-items:flex-end; justify-content:center; height:160px; margin-bottom:.45rem;">
+                                <div style="width:72px; border-radius:18px 18px 10px 10px; height: {{ $chartLaporanPenyerapanAnggaran['bar_height_available'] }}px; background: linear-gradient(180deg, #1f6b45 0%, #2f8b59 100%); box-shadow:0 8px 18px rgba(31,107,69,.12);"></div>
+                            </div>
+                            <div style="font-size:.85rem; color:#304935; font-weight:700;">Anggaran tersedia</div>
+                        </div>
+                        <div style="flex:1; text-align:center;">
+                            <div style="display:flex; align-items:flex-end; justify-content:center; height:160px; margin-bottom:.45rem;">
+                                <div style="width:72px; border-radius:18px 18px 10px 10px; height: {{ $chartLaporanPenyerapanAnggaran['bar_height_realisasi'] }}px; background: linear-gradient(180deg, #7bbd86 0%, #4d9f60 100%); box-shadow:0 8px 18px rgba(77,159,96,.12);"></div>
+                            </div>
+                            <div style="font-size:.85rem; color:#304935; font-weight:700;">Realisasi s.d. April</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:1rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; font-size:.8rem; color:#516553; margin-bottom:.35rem;">
+                            <span style="font-weight:700; color:#304935;">Progress penyerapan</span>
+                            <span>{{ number_format($chartLaporanPenyerapanAnggaran['ratio'], 2, ',', '.') }}%</span>
+                        </div>
+                        <div style="height:10px; border-radius:999px; background:#e8efe9; overflow:hidden;">
+                            <div style="height:100%; width: {{ $chartLaporanPenyerapanAnggaran['ratio'] }}%; background: linear-gradient(90deg, var(--chart-forest) 0%, var(--chart-leaf) 100%);"></div>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            @else
+                <div class="placeholder-chart">
+                    <div>
+                        <div class="placeholder-badge">Data belum tersedia</div>
+                        <h5 style="margin:.75rem 0 .35rem; color:#304935;">Laporan penyerapan anggaran kosong</h5>
+                        <p style="margin:0; color:#5e6f60;">Sheet laporan tidak ditemukan atau belum punya nilai yang bisa dibaca.</p>
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 </section>
