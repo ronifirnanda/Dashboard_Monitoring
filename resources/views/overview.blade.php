@@ -153,9 +153,12 @@
 
     <div style="padding: 0 1.25rem 1rem 1.25rem;">
         <form method="GET" action="{{ route('overview') }}" style="display:flex; gap:.75rem; flex-wrap:wrap; align-items:end;">
+            @if(request('upload'))
+                <input type="hidden" name="upload" value="{{ request('upload') }}">
+            @endif
             <div style="min-width:220px; flex:1; max-width:360px;">
                 <label for="chart_month" class="form-label fw-semibold mb-2">Filter Bulan Grafik</label>
-                <select name="chart_month" id="chart_month" class="form-select rounded-4" @if(empty($monthOptions)) disabled @endif>
+                <select name="chart_month" id="chart_month" class="form-select rounded-4" @if(empty($monthOptions)) disabled @endif onchange="this.form.submit()">
                     <option value="">-- pilih bulan --</option>
                     @foreach ($monthOptions as $monthOption)
                         <option value="{{ $monthOption }}" @selected(($selectedMonth ?? '') === $monthOption)>{{ $monthOption }}</option>
@@ -182,55 +185,73 @@
             </div>
 
             @if (!empty($monthOptions) || !empty($selectedMonthDataBarang))
-                <div class="metric-grid">
-                    <div class="metric-box">
-                        <div class="metric-label">Total Target</div>
-                        <div class="metric-value">{{ $chartBelanjaBarang['total_target_formatted'] }}</div>
+                <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:.8rem; margin-top:.75rem; margin-bottom:1rem;">
+                    <div style="padding:.85rem 1rem .9rem; border:1px solid #dfeee1; border-radius:14px; background:#fbfefb; box-shadow:0 8px 16px rgba(31,107,69,.05); min-height:74px; display:flex; flex-direction:column; justify-content:center;">
+                        <div style="font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:#7a8a7d; line-height:1; margin-bottom:.3rem;">Total Target</div>
+                        <div style="font-size:1.1rem; font-weight:800; color:#203d2a; line-height:1.05;">{{ $chartBelanjaBarang['total_target_formatted'] }}</div>
                     </div>
-                    <div class="metric-box">
-                        <div class="metric-label">Total Realisasi</div>
-                        <div class="metric-value">{{ $chartBelanjaBarang['total_realisasi_formatted'] }}</div>
+                    <div style="padding:.85rem 1rem .9rem; border:1px solid #dfeee1; border-radius:14px; background:#fbfefb; box-shadow:0 8px 16px rgba(31,107,69,.05); min-height:74px; display:flex; flex-direction:column; justify-content:center;">
+                        <div style="font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:#7a8a7d; line-height:1; margin-bottom:.3rem;">Total Realisasi</div>
+                        <div style="font-size:1.1rem; font-weight:800; color:#203d2a; line-height:1.05;">{{ $chartBelanjaBarang['total_realisasi_formatted'] }}</div>
                     </div>
-                    <div class="metric-box">
-                        <div class="metric-label">Serapan Rata-rata</div>
-                        <div class="metric-value">{{ number_format($chartBelanjaBarang['overall_ratio'], 2, ',', '.') }}%</div>
+                    <div style="padding:.85rem 1rem .9rem; border:1px solid #dfeee1; border-radius:14px; background:#fbfefb; box-shadow:0 8px 16px rgba(31,107,69,.05); min-height:74px; display:flex; flex-direction:column; justify-content:center;">
+                        <div style="font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:#7a8a7d; line-height:1; margin-bottom:.3rem;">Serapan Rata-rata</div>
+                        <div style="font-size:1.1rem; font-weight:800; color:#203d2a; line-height:1.05;">{{ number_format($chartBelanjaBarang['overall_ratio'], 2, ',', '.') }}%</div>
                     </div>
                 </div>
 
                 @if (!empty($selectedMonthDataBarang))
-                    <div class="chart-shell">
-                        <div style="display:flex; justify-content:space-between; align-items:center; gap:.75rem; margin-bottom:.8rem; flex-wrap:wrap;">
-                            <h5 style="margin:0; color:#304935;">{{ $selectedMonthDataBarang['label'] }}</h5>
-                            <div style="font-size:.82rem; color:#5e6f60;">
-                                {{ $selectedMonthDataBarang['total_realisasi_formatted'] }} / {{ $selectedMonthDataBarang['total_target_formatted'] }}
-                                ({{ number_format($selectedMonthDataBarang['ratio'], 2, ',', '.') }}%)
+                    <div style="margin-top:.75rem; padding:1rem; border:1px solid #dfeee1; border-radius:14px; background:#fbfefb;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:.75rem; flex-wrap:wrap;">
+                            <div>
+                                <h5 style="margin:0; color:#304935; font-size:1.05rem; font-weight:700;">{{ $selectedMonthDataBarang['label'] }}</h5>
+                                <div style="font-size:.78rem; color:#7a8a7d;">Pilih bulan untuk menampilkan grafik bulan tersebut.</div>
+                            </div>
+                            <div style="font-size:.8rem; color:#6b7c72; text-align:right;">
+                                <div>{{ $selectedMonthDataBarang['total_realisasi_formatted'] }} / {{ $selectedMonthDataBarang['total_target_formatted'] }}</div>
+                                <div style="font-weight:700; color:#304935;">({{ number_format($selectedMonthDataBarang['ratio'], 2, ',', '.') }}%)</div>
                             </div>
                         </div>
 
+                        <div style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap; margin-bottom:1rem; font-size:.8rem; color:#516553;">
+                            <span style="display:inline-flex; align-items:center; gap:.4rem;"><span style="width:10px; height:10px; border-radius:50%; background:var(--chart-forest); display:inline-block;"></span>Target</span>
+                            <span style="display:inline-flex; align-items:center; gap:.4rem;"><span style="width:10px; height:10px; border-radius:50%; background:var(--chart-leaf); display:inline-block;"></span>Realisasi</span>
+                        </div>
+
                         @if (!empty($selectedMonthDataBarang['teams']))
-                            <div class="chart-bars" style="grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); height: 190px; align-items:flex-end; margin-bottom:.8rem;">
+                            <div style="display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-end; justify-content:flex-start; padding-bottom:.75rem; border-bottom:1px solid #e8efe9;">
                                 @foreach ($selectedMonthDataBarang['teams'] as $team)
-                                    <div class="bar-wrap" title="{{ $team['label'] }} | Target: {{ $team['target_formatted'] }} | Realisasi: {{ $team['realisasi_formatted'] }}">
-                                        <div style="display:flex; align-items:flex-end; justify-content:center; gap:8px; width:100%; height:160px;">
-                                            <div style="display:flex; flex-direction:column; align-items:center; gap:6px; flex:1;">
-                                                <div class="bar filled" style="width:100%; height: {{ $team['target_bar_height'] }}px; background: linear-gradient(180deg, #1f6b45 0%, #2f8b59 100%);"></div>
-                                                <span style="font-size:10px; color:#6b7c72;">T</span>
+                                    <div style="width:92px; flex:0 0 auto; text-align:center;">
+                                        <div style="display:flex; align-items:flex-end; justify-content:center; gap:8px; height:150px; margin-bottom:.45rem;">
+                                            <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1;">
+                                                <div style="width:16px; border-radius:12px 12px 4px 4px; height: {{ $team['target_bar_height'] }}px; background: linear-gradient(180deg, #1f6b45 0%, #2f8b59 100%); box-shadow: 0 6px 14px rgba(31,107,69,.14);"></div>
+                                                <span style="font-size:10px; color:#9aa8a0; line-height:1;">T</span>
                                             </div>
-                                            <div style="display:flex; flex-direction:column; align-items:center; gap:6px; flex:1;">
-                                                <div class="bar filled" style="width:100%; height: {{ $team['realisasi_bar_height'] }}px; background: linear-gradient(180deg, #77b66d 0%, #4d9f60 100%);"></div>
-                                                <span style="font-size:10px; color:#6b7c72;">R</span>
+                                            <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1;">
+                                                <div style="width:16px; border-radius:12px 12px 4px 4px; height: {{ $team['realisasi_bar_height'] }}px; background: linear-gradient(180deg, #7bbd86 0%, #4d9f60 100%); box-shadow: 0 6px 14px rgba(77,159,96,.14);"></div>
+                                                <span style="font-size:10px; color:#9aa8a0; line-height:1;">R</span>
                                             </div>
                                         </div>
-                                        <div class="day" style="max-width:72px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ $team['label'] }}</div>
-                                        <div style="display:flex; justify-content:space-between; align-items:center; gap:.5rem; font-size:.8rem; color:#516553; margin-top:.35rem;">
-                                            <span style="font-weight:700; color:#304935;">{{ $team['realisasi_formatted'] }} / {{ $team['target_formatted'] }}</span>
-                                            <span>{{ number_format($team['ratio'], 2, ',', '.') }}%</span>
+                                        <div style="font-size:.8rem; color:#7a8a7d; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ $team['label'] }}</div>
+                                    </div>
+                                @endforeach
+                            </div>
+
+                            <div style="display:grid; gap:.55rem; margin-top:1rem;">
+                                @foreach ($selectedMonthDataBarang['teams'] as $team)
+                                    <div>
+                                        <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:.25rem; font-size:.8rem; color:#5e6f60;">
+                                            <strong style="color:#304935; font-size:.82rem;">{{ $team['label'] }}</strong>
+                                            <span>{{ $team['realisasi_formatted'] }} / {{ $team['target_formatted'] }} ({{ number_format($team['ratio'], 2, ',', '.') }}%)</span>
+                                        </div>
+                                        <div style="height:8px; border-radius:999px; background:#e8efe9; overflow:hidden;">
+                                            <div style="height:100%; width: {{ $team['ratio'] }}%; background: linear-gradient(90deg, var(--chart-forest) 0%, var(--chart-leaf) 100%);"></div>
                                         </div>
                                     </div>
                                 @endforeach
                             </div>
                         @else
-                            <div class="placeholder-chart">
+                            <div class="placeholder-chart" style="min-height:220px;">
                                 <div>
                                     <div class="placeholder-badge">Data belum tersedia</div>
                                     <h5 style="margin:.75rem 0 .35rem; color:#304935;">Belanja Barang kosong di bulan ini</h5>
@@ -383,67 +404,5 @@
         </div>
     </div>
 </section>
-
-@if (count($rows) > 0)
-<div class="panel" style="margin-top: 2rem;">
-    <div class="panel-header">
-        <div>
-            <div class="panel-title">Data dari Excel</div>
-            <div class="panel-small">{{ count($rows) }} baris data dari file yang diupload</div>
-        </div>
-        <a href="{{ route('keutata') }}" class="btn-pill btn-outline-soft py-2 px-3"><i class="bi bi-eye me-2"></i>Lihat Detail</a>
-    </div>
-
-    @if (count($analysis) > 0)
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-        @foreach ($analysis as $item)
-        <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 1rem; background: #f9f9f9;">
-            <h6 style="margin: 0 0 0.5rem 0; font-size: 0.9rem; color: #666;">
-                <i class="bi bi-table me-2"></i>{{ $item['sheet'] ?? 'Sheet' }}
-            </h6>
-            <div style="font-size: 0.85rem; color: #777; line-height: 1.6;">
-                <div><strong>Header:</strong> Baris {{ $item['header_row'] ?? '?' }}</div>
-                <div><strong>Kolom:</strong> {{ implode(', ', $item['matched_columns'] ?? []) }}</div>
-                <div><strong>Mode:</strong> <span style="display: inline-block; padding: 2px 6px; border-radius: 4px; background: {{ $item['mode'] === 'detected' ? '#d4edda' : '#fff3cd' }}; font-size: 0.75rem;">{{ $item['mode'] === 'detected' ? 'struktur terdeteksi' : 'fallback mode' }}</span></div>
-            </div>
-        </div>
-        @endforeach
-    </div>
-    @endif
-
-    <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
-            <thead>
-                <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
-                    <th style="padding: 0.75rem; text-align: left; font-weight: 600;">No.</th>
-                    <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Sheet</th>
-                    <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Tim</th>
-                    <th style="padding: 0.75rem; text-align: right; font-weight: 600;">Nominal RPD</th>
-                    <th style="padding: 0.75rem; text-align: right; font-weight: 600;">Deviasi 5%</th>
-                    <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Uraian</th>
-                    <th style="padding: 0.75rem; text-align: right; font-weight: 600;">Nominal Pengajuan</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($rows as $index => $row)
-                <tr style="border-bottom: 1px solid #eee; {{ ($index + 1) % 2 === 0 ? 'background: #fafafa;' : '' }}">
-                    <td style="padding: 0.75rem;">{{ $row['no'] ?? ($index + 1) }}</td>
-                    <td style="padding: 0.75rem;"><span class="badge text-bg-light border">{{ $row['sheet'] ?? '-' }}</span></td>
-                    <td style="padding: 0.75rem;">{{ $row['tim_display'] ?? '-' }}</td>
-                    <td style="padding: 0.75rem; text-align: right;">{{ $row['nominal_rpd'] ?? '-' }}</td>
-                    <td style="padding: 0.75rem; text-align: right;">{{ $row['deviasi'] ?? '-' }}</td>
-                    <td style="padding: 0.75rem;">{{ $row['uraian'] ?? '-' }}</td>
-                    <td style="padding: 0.75rem; text-align: right;">{{ $row['nominal_pengajuan'] ?? '-' }}</td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="7" style="padding: 1.5rem; text-align: center; color: #999;">Tidak ada data yang ditemukan</td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-</div>
-@endif
 
 @endsection

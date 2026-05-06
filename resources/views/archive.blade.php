@@ -118,9 +118,23 @@
         </table>
     </div>
 
-    @if ($uploads->total() > 0)
-    <div style="padding: 1rem; border-top: 1px solid #eee; margin-top: 1rem;">
-        {{ $uploads->links() }}
+    @if ($uploads->hasPages())
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; padding: 1rem; border-top: 1px solid #eee; margin-top: 1rem; flex-wrap:wrap;">
+        <div style="font-size:0.9rem; color:#5e6f60;">
+            Menampilkan {{ $uploads->firstItem() }} - {{ $uploads->lastItem() }} dari {{ $uploads->total() }} file
+        </div>
+        <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
+            <a href="{{ $uploads->previousPageUrl() ?? '#' }}"
+               class="btn-pill btn-outline-soft py-1 px-3 {{ $uploads->onFirstPage() ? 'disabled' : '' }}"
+               style="font-size:0.85rem; pointer-events: {{ $uploads->onFirstPage() ? 'none' : 'auto' }}; opacity: {{ $uploads->onFirstPage() ? '0.5' : '1' }};">
+                Sebelumnya
+            </a>
+            <a href="{{ $uploads->nextPageUrl() ?? '#' }}"
+               class="btn-pill btn-outline-soft py-1 px-3 {{ $uploads->hasMorePages() ? '' : 'disabled' }}"
+               style="font-size:0.85rem; pointer-events: {{ $uploads->hasMorePages() ? 'auto' : 'none' }}; opacity: {{ $uploads->hasMorePages() ? '1' : '0.5' }};">
+                Berikutnya
+            </a>
+        </div>
     </div>
     @endif
 </div>

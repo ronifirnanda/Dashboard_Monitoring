@@ -16,47 +16,51 @@ class DashboardController extends Controller
     public function overview(Request $request): View
     {
         $viewData = $this->resolveKeutataViewData($request->query('upload'));
-        $chart = $this->buildOverviewChartData($viewData['rows']);
+        $chartBelanjaBarang = $this->buildBelanjaChartDataFromRawSheets($viewData['rawSheets'], 'belanja barang');
+        $chartBelanjaPegawai = $this->buildBelanjaChartDataFromRawSheets($viewData['rawSheets'], 'belanja pegawai');
         $selectedMonth = trim((string) $request->query('chart_month', ''));
-        $monthOptions = array_map(static fn ($month) => $month['label'], $chart['months'] ?? []);
+        $monthOptions = array_values(array_filter(
+            $this->extractRawSheetMonthOptions($viewData['rawSheets']),
+            static fn ($month) => $month !== 'Tanpa Bulan'
+        ));
 
-        $selectedMonthData = null;
-        $selectedMonthChart = null;
+        usort($monthOptions, function ($a, $b) {
+            $monthA = $this->detectMonthFromText((string) $a);
+            $monthB = $this->detectMonthFromText((string) $b);
 
-        if ($selectedMonth !== '') {
-            foreach ($chart['months'] ?? [] as $month) {
-                if (($month['label'] ?? '') === $selectedMonth) {
-                    $selectedMonthData = $month;
-                    break;
-                }
+            $orderA = $monthA['order'] ?? 99;
+            $orderB = $monthB['order'] ?? 99;
+
+            if ($orderA === $orderB) {
+                return strcmp((string) $a, (string) $b);
             }
 
-            if ($selectedMonthData === null) {
-                $selectedMonthChart = $this->buildOverviewChartDataForMonth($viewData['rows'], $selectedMonth);
+            return $orderA <=> $orderB;
+        });
 
-                if ($selectedMonthChart !== null) {
-                    $selectedMonthData = $selectedMonthChart['months'][0] ?? null;
-                }
-            }
+        $latestMonth = $monthOptions !== [] ? $monthOptions[array_key_last($monthOptions)] : '';
 
-            if ($selectedMonthData === null && ! in_array($selectedMonth, $monthOptions, true)) {
-                $selectedMonth = '';
-            }
+        if ($selectedMonth === '') {
+            $selectedMonth = $latestMonth;
         }
 
-        $displayChart = $selectedMonthChart ?? $chart;
+        if ($selectedMonth !== '' && ! in_array($selectedMonth, $monthOptions, true)) {
+            $selectedMonth = $latestMonth;
+        }
+
+        $selectedMonthDataBarang = $this->findBelanjaMonthData($chartBelanjaBarang['months'] ?? [], $selectedMonth);
+        $selectedMonthDataPegawai = $this->findBelanjaMonthData($chartBelanjaPegawai['months'] ?? [], $selectedMonth);
 
         return view('overview', [
             'rows' => $viewData['rows'],
             'fileName' => $viewData['fileName'],
             'analysis' => $viewData['analysis'],
-            'chart' => $displayChart,
-            'chartBelanjaBarang' => $displayChart,
-            'chartBelanjaPegawai' => $displayChart,
+            'chartBelanjaBarang' => $chartBelanjaBarang,
+            'chartBelanjaPegawai' => $chartBelanjaPegawai,
             'monthOptions' => $monthOptions,
             'selectedMonth' => $selectedMonth,
-            'selectedMonthDataBarang' => $selectedMonthData,
-            'selectedMonthDataPegawai' => $selectedMonthData,
+            'selectedMonthDataBarang' => $selectedMonthDataBarang,
+            'selectedMonthDataPegawai' => $selectedMonthDataPegawai,
             'error' => null,
         ]);
     }
@@ -375,6 +379,191 @@ class DashboardController extends Controller
         });
 
         return $result;
+    }
+
+    private function buildBelanjaChartDataFromRawSheets(array $rawSheets, string $sectionKeyword): array
+    {
+        $monthlyTeamData = [];
+
+        foreach ($rawSheets as $rawSheet) {
+            $monthMeta = $this->detectMonthFromText((string) ($rawSheet['month_label'] ?? ''));
+
+            if ($monthMeta === null) {
+                $monthMeta = $this->detectMonthFromText((string) ($rawSheet['sheet'] ?? ''));
+            }
+
+            if ($monthMeta === null) {
+                continue;
+            }
+
+            $sectionRows = $this->extractBelanjaSectionRowsFromRawSheet($rawSheet, $sectionKeyword);
+
+            if ($sectionRows === []) {
+                continue;
+            }
+
+            $monthKey = $monthMeta['key'];
+
+            if (! isset($monthlyTeamData[$monthKey])) {
+                $monthlyTeamData[$monthKey] = [
+                    'month' => $monthMeta['label'],
+                    'order' => $monthMeta['order'],
+                    'teams' => [],
+                ];
+            }
+
+            foreach ($sectionRows as $sectionRow) {
+                $team = trim((string) ($sectionRow['label'] ?? ''));
+
+                if ($team === '') {
+                    continue;
+                }
+
+                $targetValue = $sectionRow['target'] ?? null;
+                $realisasiValue = $sectionRow['realisasi'] ?? null;
+
+                if ($targetValue === null && $realisasiValue === null) {
+                    continue;
+                }
+
+                if (! isset($monthlyTeamData[$monthKey]['teams'][$team])) {
+                    $monthlyTeamData[$monthKey]['teams'][$team] = [
+                        'label' => $team,
+                        'target' => 0.0,
+                        'realisasi' => 0.0,
+                    ];
+                }
+
+                $monthlyTeamData[$monthKey]['teams'][$team]['target'] += $targetValue ?? 0.0;
+                $monthlyTeamData[$monthKey]['teams'][$team]['realisasi'] += $realisasiValue ?? 0.0;
+            }
+        }
+
+        if ($monthlyTeamData === []) {
+            return [
+                'months' => [],
+                'total_target_formatted' => number_format(0, 0, ',', '.'),
+                'total_realisasi_formatted' => number_format(0, 0, ',', '.'),
+                'overall_ratio' => 0,
+            ];
+        }
+
+        usort($monthlyTeamData, static fn ($a, $b) => $a['order'] <=> $b['order']);
+
+        $months = [];
+        $grandTotalTarget = 0.0;
+        $grandTotalRealisasi = 0.0;
+
+        foreach ($monthlyTeamData as $monthData) {
+            $teams = array_values($monthData['teams']);
+            usort($teams, static fn ($a, $b) => $b['target'] <=> $a['target']);
+
+            $monthTotalTarget = 0.0;
+            $monthTotalRealisasi = 0.0;
+
+            foreach ($teams as &$team) {
+                $monthTotalTarget += $team['target'];
+                $monthTotalRealisasi += $team['realisasi'];
+            }
+            unset($team);
+
+            $maxScale = 0.0;
+
+            if ($teams !== []) {
+                $maxScale = max(array_map(static fn ($team) => max($team['target'], $team['realisasi']), $teams));
+            }
+
+            foreach ($teams as &$team) {
+                $team['target_formatted'] = number_format($team['target'], 0, ',', '.');
+                $team['realisasi_formatted'] = number_format($team['realisasi'], 0, ',', '.');
+                $team['ratio'] = $team['target'] > 0 ? min(100, ($team['realisasi'] / $team['target']) * 100) : 0;
+                $team['target_bar_height'] = $maxScale > 0 ? max(12, (int) round(($team['target'] / $maxScale) * 150)) : 12;
+                $team['realisasi_bar_height'] = $maxScale > 0 ? max(12, (int) round(($team['realisasi'] / $maxScale) * 150)) : 12;
+            }
+            unset($team);
+
+            $monthRatio = $monthTotalTarget > 0 ? ($monthTotalRealisasi / $monthTotalTarget) * 100 : 0;
+
+            $months[] = [
+                'label' => $monthData['month'],
+                'teams' => array_slice($teams, 0, 8),
+                'total_target_formatted' => number_format($monthTotalTarget, 0, ',', '.'),
+                'total_realisasi_formatted' => number_format($monthTotalRealisasi, 0, ',', '.'),
+                'ratio' => max(0, min(100, round($monthRatio, 2))),
+            ];
+
+            $grandTotalTarget += $monthTotalTarget;
+            $grandTotalRealisasi += $monthTotalRealisasi;
+        }
+
+        $overallRatio = $grandTotalTarget > 0 ? ($grandTotalRealisasi / $grandTotalTarget) * 100 : 0;
+
+        return [
+            'months' => $months,
+            'total_target_formatted' => number_format($grandTotalTarget, 0, ',', '.'),
+            'total_realisasi_formatted' => number_format($grandTotalRealisasi, 0, ',', '.'),
+            'overall_ratio' => max(0, min(100, round($overallRatio, 2))),
+        ];
+    }
+
+    private function extractBelanjaSectionRowsFromRawSheet(array $rawSheet, string $sectionKeyword): array
+    {
+        $rows = $rawSheet['rows'] ?? [];
+        $normalizedSectionKeyword = strtolower(trim($sectionKeyword));
+
+        foreach ($rows as $index => $rowData) {
+            $cells = $rowData['cells'] ?? [];
+            $rowText = strtolower(trim(implode(' ', array_filter(array_map(static fn ($cell) => trim((string) $cell), $cells)))));
+
+            if ($rowText === '' || ! str_contains($rowText, 'rpd bulan') || ! str_contains($rowText, $normalizedSectionKeyword)) {
+                continue;
+            }
+
+            $sectionRows = [];
+
+            for ($dataIndex = $index + 2; $dataIndex < count($rows); $dataIndex++) {
+                $dataCells = $rows[$dataIndex]['cells'] ?? [];
+                $label = trim((string) ($dataCells[0] ?? ''));
+                $target = trim((string) ($dataCells[1] ?? ''));
+                $realisasi = trim((string) ($dataCells[2] ?? ''));
+
+                if ($label === '' && $target === '' && $realisasi === '') {
+                    break;
+                }
+
+                if ($label === '' || preg_match('/^(persentase|total|jumlah|rpd bulan)$/i', $label) === 1) {
+                    continue;
+                }
+
+                $targetValue = $this->normalizeToNumber($target);
+                $realisasiValue = $this->normalizeToNumber($realisasi);
+
+                if ($targetValue === null && $realisasiValue === null) {
+                    continue;
+                }
+
+                $sectionRows[] = [
+                    'label' => $label,
+                    'target' => $targetValue,
+                    'realisasi' => $realisasiValue,
+                ];
+            }
+
+            return $sectionRows;
+        }
+
+        return [];
+    }
+
+    private function findBelanjaMonthData(array $months, string $selectedMonth): ?array
+    {
+        foreach ($months as $month) {
+            if (($month['label'] ?? '') === $selectedMonth) {
+                return $month;
+            }
+        }
+
+        return null;
     }
 
     private function readCellDisplayValue($sheet, string $cellAddress): string
