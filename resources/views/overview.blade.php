@@ -219,20 +219,20 @@
                         </div>
 
                         @if (!empty($selectedMonthDataBarang['teams']))
-                            <div style="display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-end; justify-content:flex-start; padding-bottom:.75rem; border-bottom:1px solid #e8efe9;">
+                            <div style="display:flex; gap:.8rem; align-items:flex-end; justify-content:flex-start; padding-bottom:.75rem; border-bottom:1px solid #e8efe9; overflow-x:auto;">
                                 @foreach ($selectedMonthDataBarang['teams'] as $team)
-                                    <div style="width:92px; flex:0 0 auto; text-align:center;">
-                                        <div style="display:flex; align-items:flex-end; justify-content:center; gap:8px; height:150px; margin-bottom:.45rem;">
-                                            <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1;">
-                                                <div style="width:16px; border-radius:12px 12px 4px 4px; height: {{ $team['target_bar_height'] }}px; background: linear-gradient(180deg, #1f6b45 0%, #2f8b59 100%); box-shadow: 0 6px 14px rgba(31,107,69,.14);"></div>
-                                                <span style="font-size:10px; color:#9aa8a0; line-height:1;">T</span>
+                                    <div style="width:auto; flex:0 0 auto; text-align:center;">
+                                        <div style="display:flex; align-items:flex-end; justify-content:center; gap:.6rem; height:150px; margin-bottom:.45rem;">
+                                            <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:0 0 auto;">
+                                                <div style="width:56px; border-radius:14px 14px 8px 8px; height: {{ $team['target_bar_height'] }}px; background: linear-gradient(180deg, #1f6b45 0%, #2f8b59 100%); box-shadow: 0 6px 14px rgba(31,107,69,.12);"></div>
+                                                <span style="font-size:9px; color:#9aa8a0; line-height:1;">T</span>
                                             </div>
-                                            <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1;">
-                                                <div style="width:16px; border-radius:12px 12px 4px 4px; height: {{ $team['realisasi_bar_height'] }}px; background: linear-gradient(180deg, #7bbd86 0%, #4d9f60 100%); box-shadow: 0 6px 14px rgba(77,159,96,.14);"></div>
-                                                <span style="font-size:10px; color:#9aa8a0; line-height:1;">R</span>
+                                            <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:0 0 auto;">
+                                                <div style="width:56px; border-radius:14px 14px 8px 8px; height: {{ $team['realisasi_bar_height'] }}px; background: linear-gradient(180deg, #7bbd86 0%, #4d9f60 100%); box-shadow: 0 6px 14px rgba(77,159,96,.12);"></div>
+                                                <span style="font-size:9px; color:#9aa8a0; line-height:1;">R</span>
                                             </div>
                                         </div>
-                                        <div style="font-size:.8rem; color:#7a8a7d; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ $team['label'] }}</div>
+                                        <div style="font-size:.75rem; color:#7a8a7d; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px; margin:0 auto;">{{ $team['label'] }}</div>
                                     </div>
                                 @endforeach
                             </div>
@@ -325,18 +325,18 @@
                         @if (!empty($selectedMonthDataPegawai['teams']))
                             <div style="display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-end; justify-content:flex-start; padding-bottom:.75rem; border-bottom:1px solid #e8efe9;">
                                 @foreach ($selectedMonthDataPegawai['teams'] as $team)
-                                    <div style="width:92px; flex:0 0 auto; text-align:center;">
-                                        <div style="display:flex; align-items:flex-end; justify-content:center; gap:8px; height:150px; margin-bottom:.45rem;">
-                                            <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1;">
-                                                <div style="width:16px; border-radius:12px 12px 4px 4px; height: {{ $team['target_bar_height'] }}px; background: linear-gradient(180deg, #38503f 0%, #4b6a56 100%); box-shadow: 0 6px 14px rgba(56,80,63,.14);"></div>
+                                    <div style="width:auto; flex:0 0 auto; text-align:center;">
+                                        <div style="display:flex; align-items:flex-end; justify-content:center; gap:1rem; height:150px; margin-bottom:.45rem;">
+                                            <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:0 0 auto;">
+                                                <div style="width:72px; border-radius:18px 18px 10px 10px; height: {{ $team['target_bar_height'] }}px; background: linear-gradient(180deg, #38503f 0%, #4b6a56 100%); box-shadow: 0 8px 18px rgba(56,80,63,.12);"></div>
                                                 <span style="font-size:10px; color:#9aa8a0; line-height:1;">T</span>
                                             </div>
-                                            <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1;">
-                                                <div style="width:16px; border-radius:12px 12px 4px 4px; height: {{ $team['realisasi_bar_height'] }}px; background: linear-gradient(180deg, #8bc19a 0%, #6fa47f 100%); box-shadow: 0 6px 14px rgba(77,159,96,.14);"></div>
+                                            <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:0 0 auto;">
+                                                <div style="width:72px; border-radius:18px 18px 10px 10px; height: {{ $team['realisasi_bar_height'] }}px; background: linear-gradient(180deg, #8bc19a 0%, #6fa47f 100%); box-shadow: 0 8px 18px rgba(111,164,127,.12);"></div>
                                                 <span style="font-size:10px; color:#9aa8a0; line-height:1;">R</span>
                                             </div>
                                         </div>
-                                        <div style="font-size:.8rem; color:#7a8a7d; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ $team['label'] }}</div>
+                                        <div style="font-size:.8rem; color:#7a8a7d; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px; margin:0 auto;">{{ $team['label'] }}</div>
                                     </div>
                                 @endforeach
                             </div>
@@ -415,13 +415,13 @@
 
                     <div style="display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-end; justify-content:flex-start; padding-bottom:.75rem; border-bottom:1px solid #e8efe9;">
                         @foreach ($chartRekapAnggaranPerTim['teams'] as $team)
-                            <div style="width:92px; flex:0 0 auto; text-align:center;">
-                                <div style="display:flex; align-items:flex-end; justify-content:center; gap:8px; height:180px; margin-bottom:.45rem;">
-                                    <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1;">
-                                        <div style="width:20px; border-radius:12px 12px 4px 4px; height: {{ $team['bar_height'] }}px; background: linear-gradient(180deg, #1f6b45 0%, #2f8b59 100%); box-shadow: 0 6px 14px rgba(31,107,69,.14);"></div>
+                            <div style="width:auto; flex:0 0 auto; text-align:center;">
+                                <div style="display:flex; align-items:flex-end; justify-content:center; gap:0; height:180px; margin-bottom:.45rem;">
+                                    <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:0 0 auto;">
+                                        <div style="width:72px; border-radius:18px 18px 10px 10px; height: {{ $team['bar_height'] }}px; background: linear-gradient(180deg, #1f6b45 0%, #2f8b59 100%); box-shadow: 0 8px 18px rgba(31,107,69,.12);"></div>
                                     </div>
                                 </div>
-                                <div style="font-size:.8rem; color:#7a8a7d; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ $team['label'] }}</div>
+                                <div style="font-size:.8rem; color:#7a8a7d; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100px; margin:0 auto;">{{ $team['label'] }}</div>
                                 <div style="font-size:.78rem; color:#304935; font-weight:700; margin-top:.25rem;">{{ $team['formatted'] }}</div>
                             </div>
                         @endforeach

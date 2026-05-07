@@ -96,23 +96,6 @@
         </div>
     @endif
 
-    @if(!empty($analysis))
-        <div class="row g-3 mb-4">
-            @foreach($analysis as $sheetAnalysis)
-                <div class="col-12 col-lg-4">
-                    <div class="reminder-card h-100">
-                        <div>
-                            <h4 class="mb-2">{{ $sheetAnalysis['sheet'] }}</h4>
-                            <p class="mb-2">Mode: {{ $sheetAnalysis['mode'] === 'detected' ? 'struktur terdeteksi' : 'fallback template' }}</p>
-                            <p class="mb-2">Header baris: {{ $sheetAnalysis['header_row'] }}</p>
-                            <p class="mb-0">Kolom dikenali: {{ $sheetAnalysis['recognized_columns'] }} | Baris data: {{ $sheetAnalysis['rows_found'] }}</p>
-                        </div>
-                    </div>
-                </div>
-            @endforeach
-        </div>
-    @endif
-
     @if(empty($rawSheets) && empty($rows))
         <div class="reminder-card">
             <div>
