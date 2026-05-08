@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Upload;
+use App\Services\GoogleSheetsSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
@@ -13,6 +14,25 @@ use Throwable;
 
 class DashboardController extends Controller
 {
+    public function syncGoogleSheet(Request $request, GoogleSheetsSyncService $sheetsSyncService): RedirectResponse
+    {
+        try {
+            $upload = $sheetsSyncService->syncToUpload();
+            $viewData = $this->loadUploadViewData($upload);
+
+            session([
+                'excel_rows' => $viewData['rows'],
+                'excel_file_name' => $viewData['fileName'],
+                'excel_analysis' => $viewData['analysis'],
+                'excel_raw_sheets' => $viewData['rawSheets'],
+            ]);
+
+            return redirect()->route('keutata', ['upload' => $upload->id])->with('success', 'Sinkronisasi Google Sheets berhasil.');
+        } catch (Throwable $e) {
+            return redirect()->route('overview')->with('uploadError', 'Sinkronisasi Google Sheets gagal: '.$e->getMessage());
+        }
+    }
+
     public function overview(Request $request): View
     {
         $viewData = $this->resolveKeutataViewData($request->query('upload'));

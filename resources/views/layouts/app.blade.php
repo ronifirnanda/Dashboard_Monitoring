@@ -830,7 +830,7 @@
             <div class="sidebar-label">General</div>
             <ul class="nav-menu">
                 <li>
-                    <a href="#" class="nav-link">
+                    <a href="{{ route('settings.index') }}" class="nav-link @if(Route::currentRouteName() == 'settings.index') active @endif">
                         <span class="icon"><i class="bi bi-gear"></i></span>
                         <span class="text">Settings</span>
                     </a>

@@ -143,6 +143,16 @@
     </div>
 </form>
 
+<div class="mt-3" style="display:flex; gap:.6rem; flex-wrap:wrap; align-items:center;">
+    <form action="{{ route('keutata.sync-google-sheet') }}" method="POST" style="margin:0;">
+        @csrf
+        <button type="submit" class="btn-pill btn-outline-soft border-0">
+            <i class="bi bi-cloud-arrow-down me-2"></i>Sync dari Google Sheets
+        </button>
+    </form>
+    <small class="text-muted">Gunakan tombol ini untuk ambil data terbaru dari spreadsheet private.</small>
+</div>
+
 <section id="charts" class="panel">
     <div class="panel-header">
         <div>
