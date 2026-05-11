@@ -88,70 +88,64 @@
     }
 </style>
 
-@if ($fileName)
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="bi bi-check-circle me-2"></i>
-        <strong>File Excel dimuat:</strong> {{ $fileName }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+@if(auth()->check() && auth()->user()->role === 'admin')
+    <form id="upload" action="{{ route('admin.keutata.import') }}" method="POST" enctype="multipart/form-data" class="panel mb-4">
+        @csrf
+        <div class="panel-header">
+            <div>
+                <div class="panel-title">Upload Excel Baru</div>
+                <div class="panel-small">Bagian ini dipertahankan supaya data dashboard tetap bisa dimuat dari Excel.</div>
+            </div>
+        </div>
+
+        @if(session('success'))
+            <div class="alert alert-success border-0 rounded-4" style="margin: 1rem;">
+                <strong>Berhasil:</strong> {{ session('success') }}
+            </div>
+        @endif
+
+        @if(session('uploadError'))
+            <div class="alert alert-danger border-0 rounded-4" style="margin: 1rem;">
+                <strong>Upload gagal:</strong> {{ session('uploadError') }}
+            </div>
+        @endif
+
+        <div style="padding: 1.5rem;">
+            <div class="d-flex flex-column flex-lg-row align-items-lg-end gap-3">
+                <div class="grow">
+                    <label for="excel_file" class="form-label fw-semibold mb-2">Pilih File Excel</label>
+                    <input
+                        type="file"
+                        name="excel_file"
+                        id="excel_file"
+                        class="form-control rounded-4 @error('excel_file') is-invalid @enderror"
+                        accept=".xlsx,.xls,.xlsm,.csv"
+                        required
+                    >
+                    @error('excel_file')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                    @enderror
+                </div>
+                <div>
+                    <button type="submit" class="btn-pill btn-primary-soft border-0">
+                        <i class="bi bi-upload me-2"></i>Upload & Pelajari
+                    </button>
+                </div>
+            </div>
+            <small class="text-muted mt-3 d-block">File Excel akan dianalisis, header terdeteksi otomatis, lalu dipakai oleh grafik yang ada di dashboard.</small>
+        </div>
+    </form>
+
+    <div class="mt-3" style="display:flex; gap:.6rem; flex-wrap:wrap; align-items:center;">
+        <form action="{{ route('admin.keutata.sync-google-sheet') }}" method="POST" style="margin:0;">
+            @csrf
+            <button type="submit" class="btn-pill btn-outline-soft border-0">
+                <i class="bi bi-cloud-arrow-down me-2"></i>Sync dari Google Sheets
+            </button>
+        </form>
+        <small class="text-muted">Gunakan tombol ini untuk ambil data terbaru dari spreadsheet private.</small>
     </div>
 @endif
-
-<form id="upload" action="{{ route('keutata.import') }}" method="POST" enctype="multipart/form-data" class="panel mb-4">
-    @csrf
-    <div class="panel-header">
-        <div>
-            <div class="panel-title">Upload Excel Baru</div>
-            <div class="panel-small">Bagian ini dipertahankan supaya data dashboard tetap bisa dimuat dari Excel.</div>
-        </div>
-    </div>
-
-    @if(session('success'))
-        <div class="alert alert-success border-0 rounded-4" style="margin: 1rem;">
-            <strong>Berhasil:</strong> {{ session('success') }}
-        </div>
-    @endif
-
-    @if(session('uploadError'))
-        <div class="alert alert-danger border-0 rounded-4" style="margin: 1rem;">
-            <strong>Upload gagal:</strong> {{ session('uploadError') }}
-        </div>
-    @endif
-
-    <div style="padding: 1.5rem;">
-        <div class="d-flex flex-column flex-lg-row align-items-lg-end gap-3">
-            <div class="grow">
-                <label for="excel_file" class="form-label fw-semibold mb-2">Pilih File Excel</label>
-                <input
-                    type="file"
-                    name="excel_file"
-                    id="excel_file"
-                    class="form-control rounded-4 @error('excel_file') is-invalid @enderror"
-                    accept=".xlsx,.xls,.xlsm,.csv"
-                    required
-                >
-                @error('excel_file')
-                    <div class="invalid-feedback d-block">{{ $message }}</div>
-                @enderror
-            </div>
-            <div>
-                <button type="submit" class="btn-pill btn-primary-soft border-0">
-                    <i class="bi bi-upload me-2"></i>Upload & Pelajari
-                </button>
-            </div>
-        </div>
-        <small class="text-muted mt-3 d-block">File Excel akan dianalisis, header terdeteksi otomatis, lalu dipakai oleh grafik yang ada di dashboard.</small>
-    </div>
-</form>
-
-<div class="mt-3" style="display:flex; gap:.6rem; flex-wrap:wrap; align-items:center;">
-    <form action="{{ route('keutata.sync-google-sheet') }}" method="POST" style="margin:0;">
-        @csrf
-        <button type="submit" class="btn-pill btn-outline-soft border-0">
-            <i class="bi bi-cloud-arrow-down me-2"></i>Sync dari Google Sheets
-        </button>
-    </form>
-    <small class="text-muted">Gunakan tombol ini untuk ambil data terbaru dari spreadsheet private.</small>
-</div>
 
 <section id="charts" class="panel">
     <div class="panel-header">

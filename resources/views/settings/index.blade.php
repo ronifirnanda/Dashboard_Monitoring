@@ -40,7 +40,7 @@
             <i class="bi bi-google settings-icon"></i>
         </div>
 
-        <form action="{{ route('settings.update-google-sheets') }}" method="POST" class="settings-form">
+        <form action="{{ route('admin.settings.update-google-sheets') }}" method="POST" class="settings-form">
             @csrf
 
             <div class="form-group">

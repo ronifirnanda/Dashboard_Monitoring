@@ -35,6 +35,6 @@ class SettingController extends Controller
 
         $setting->update(['value' => $request->input('spreadsheet_id')]);
 
-        return redirect()->route('settings.index')->with('success', 'Konfigurasi Google Sheets berhasil diperbarui.');
+        return redirect()->route('admin.settings.index')->with('success', 'Konfigurasi Google Sheets berhasil diperbarui.');
     }
 }

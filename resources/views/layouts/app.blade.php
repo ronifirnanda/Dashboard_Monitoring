@@ -300,9 +300,11 @@
             align-items: center;
             gap: 12px;
             padding-left: 10px;
+            position: relative;
+            cursor: pointer;
         }
 
-        .avatar {
+        .profile-chip .avatar {
             width: 46px;
             height: 46px;
             border-radius: 50%;
@@ -311,7 +313,7 @@
             flex: 0 0 auto;
         }
 
-        .avatar img {
+        .profile-chip .avatar img {
             width: 100%;
             height: 100%;
             object-fit: cover;
@@ -329,6 +331,69 @@
             color: var(--muted);
             margin-top: 2px;
         }
+
+        .profile-dropdown {
+            position: absolute;
+            top: 100%;
+            right: -10px;
+            background: white;
+            border: 1px solid #e6ece6;
+            border-radius: 14px;
+            box-shadow: 0 12px 28px rgba(20, 35, 24, 0.12);
+            min-width: 220px;
+            margin-top: 8px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .profile-dropdown.show {
+            display: block;
+        }
+
+        .profile-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            color: var(--text);
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            border-bottom: 1px solid #edf2ed;
+        }
+
+        .profile-dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .profile-dropdown-item:hover {
+            background: #f6faf6;
+        }
+
+        .profile-dropdown-label {
+            font-size: 12px;
+            color: var(--muted);
+            padding: 10px 16px 6px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .profile-dropdown-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            background: #e3f3ea;
+            color: var(--primary);
+        }
+
 
         .page-head {
             display: flex;
@@ -829,12 +894,14 @@
 
             <div class="sidebar-label">General</div>
             <ul class="nav-menu">
-                <li>
-                    <a href="{{ route('settings.index') }}" class="nav-link @if(Route::currentRouteName() == 'settings.index') active @endif">
-                        <span class="icon"><i class="bi bi-gear"></i></span>
-                        <span class="text">Settings</span>
-                    </a>
-                </li>
+                @if(auth()->check() && auth()->user()->role === 'admin')
+                    <li>
+                        <a href="{{ route('admin.settings.index') }}" class="nav-link @if(Route::currentRouteName() == 'admin.settings.index') active @endif">
+                            <span class="icon"><i class="bi bi-gear"></i></span>
+                            <span class="text">Settings</span>
+                        </a>
+                    </li>
+                @endif
                 <li>
                     <a href="#" class="nav-link">
                         <span class="icon"><i class="bi bi-question-circle"></i></span>
@@ -869,15 +936,23 @@
                     </button>
                     <button type="button" class="icon-btn" aria-label="Messages"><i class="bi bi-envelope"></i></button>
                     <button type="button" class="icon-btn" aria-label="Notifications"><i class="bi bi-bell"></i></button>
-                    <div class="profile-chip">
-                        <div class="avatar">
-                            <img src="https://ui-avatars.com/api/?name=Totok+Michael&background=efc7b7&color=2b2b2b" alt="Totok Michael">
+                    @if(auth()->check() && auth()->user()->role === 'admin')
+                        <div class="profile-chip">
+                            <div class="avatar">
+                                <img src="https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->name ?? 'Admin') }}&background=efc7b7&color=2b2b2b" alt="{{ auth()->user()->name ?? 'Admin' }}">
+                            </div>
+                            <div class="profile-copy">
+                                <strong>{{ auth()->user()->name ?? 'Admin' }}</strong>
+                                <span>{{ auth()->user()->email ?? '' }}</span>
+                            </div>
                         </div>
-                        <div class="profile-copy">
-                            <strong>Totok Michael</strong>
-                            <span>tmichael20@mail.com</span>
-                        </div>
-                    </div>
+                        <form action="{{ route('admin.logout') }}" method="POST" style="margin:0;">
+                            @csrf
+                            <button type="submit" class="btn-pill btn-outline-soft border-0">Logout</button>
+                        </form>
+                    @else
+                        <a href="{{ route('admin.login') }}" class="btn-pill btn-primary-soft border-0">Login Admin</a>
+                    @endif
                 </div>
             </header>
 
@@ -937,6 +1012,25 @@
                     applyTheme(currentTheme);
                 });
             }
+        })();
+
+        // Auto-dismiss alerts after 10 seconds
+        (function () {
+            const alerts = document.querySelectorAll('.alert[role="alert"]');
+            alerts.forEach(function (alert) {
+                // Only auto-dismiss success alerts (typically "File Excel dimuat" notifications)
+                if (alert.classList.contains('alert-success')) {
+                    const timeout = setTimeout(function () {
+                        const bsAlert = new bootstrap.Alert(alert);
+                        bsAlert.close();
+                    }, 10000); // 10 seconds
+
+                    // Clear timeout if user manually closes the alert
+                    alert.addEventListener('close.bs.alert', function () {
+                        clearTimeout(timeout);
+                    });
+                }
+            });
         })();
     </script>
     @stack('scripts')
