@@ -83,7 +83,7 @@ class KeutataExcelUploadTest extends TestCase
             $this->assertSame(200, $overviewResponse->getStatusCode());
 
             $overviewContent = $overviewResponse->getContent();
-            $this->assertStringContainsString('Grafik Target vs Realisasi', $overviewContent);
+            $this->assertStringContainsString('Target vs Realisasi', $overviewContent);
             $this->assertStringContainsString('Februari', $overviewContent);
             $this->assertStringContainsString('PSS', $overviewContent);
             $this->assertStringContainsString('Distribusi', $overviewContent);
@@ -284,7 +284,7 @@ class KeutataExcelUploadTest extends TestCase
             $this->assertStringContainsString('IPDS', $maretContent);
             $this->assertStringContainsString('PSS', $maretContent);
             $this->assertStringContainsString('Neraca', $maretContent);
-            $this->assertStringContainsString('Grafik Target vs Realisasi', $maretContent);
+            $this->assertStringContainsString('Target vs Realisasi', $maretContent);
         } finally {
             if (is_file($tempFile)) {
                 @unlink($tempFile);

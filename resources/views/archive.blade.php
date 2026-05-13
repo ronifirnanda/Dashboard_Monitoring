@@ -96,7 +96,7 @@
                         </span>
                     </td>
                     <td style="padding: 0.75rem;">
-                        {{ $upload->created_at->format('d M Y, H:i') }}
+                        {{ $upload->created_at->copy()->timezone('Asia/Jakarta')->format('d M Y, H:i') }}
                     </td>
                     <td style="padding: 0.75rem; text-align: center;">
                         <a href="{{ route('archive.load', $upload->id) }}" class="btn-pill btn-primary-soft py-1 px-2" style="font-size: 0.85rem;">
@@ -224,7 +224,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const fileName = button.getAttribute('data-file-name');
 
         deleteFileName.textContent = fileName;
-        deleteForm.action = '{{ route("archive.delete", ":id") }}'.replace(':id', fileId);
+        deleteForm.action = '{{ route("admin.archive.delete", ":id") }}'.replace(':id', fileId);
     });
 
     // Bulk delete modal
@@ -281,7 +281,7 @@ function deselectAll() {
                 <button type="button" class="btn-pill btn-outline-soft" data-bs-dismiss="modal" style="margin-right: 0.5rem;">
                     Batal
                 </button>
-                <form id="bulkDeleteForm" method="POST" action="{{ route('archive.bulk-delete') }}" style="display: inline;">
+                <form id="bulkDeleteForm" method="POST" action="{{ route('admin.archive.bulk-delete') }}" style="display: inline;">
                     @csrf
                     <input type="hidden" id="deleteIds" name="ids" value="">
                     <button type="submit" class="btn-pill" style="background: #c92a2a; color: white; border: none; font-weight: 500;">

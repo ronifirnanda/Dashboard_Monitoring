@@ -96,8 +96,8 @@
     <div class="panel">
         <div class="panel-header">
             <div>
-                <div class="panel-title">Grafik Target vs Realisasi</div>
-                <div class="panel-small">Pilih bulan dulu, lalu grafik akan tampil untuk bulan tersebut.</div>
+                <div class="panel-title">Target vs Realisasi</div>
+                <div class="panel-small">Pilih bulan dulu, lalu akan tampil untuk bulan tersebut.</div>
             </div>
             <button type="button" class="icon-btn" style="width:36px;height:36px;"><i class="bi bi-arrow-up-right"></i></button>
         </div>
@@ -114,7 +114,7 @@
                     </select>
                 </div>
                 <div>
-                    <button type="submit" class="btn-pill btn-primary-soft border-0">Tampilkan Grafik</button>
+                    <button type="submit" class="btn-pill btn-primary-soft border-0">Tampilkan</button>
                 </div>
             </form>
 
@@ -184,7 +184,7 @@
                 <div class="reminder-card" style="margin-top:.5rem;">
                     <div>
                         <h4>Pilih bulan terlebih dahulu</h4>
-                        <p>Setelah bulan dipilih, grafik target vs realisasi per tim akan ditampilkan di sini.</p>
+                        <p>Setelah bulan dipilih, target vs realisasi per tim akan ditampilkan di sini.</p>
                     </div>
                 </div>
             @endif
@@ -192,7 +192,7 @@
             <div class="reminder-card" style="margin-top:.5rem;">
                 <div>
                     <h4>Data bulanan belum ditemukan</h4>
-                    <p>Grafik ini hanya menampilkan sheet yang nama-nya bulan (contoh: Februari, Maret, April), lalu merinci target/realisasi per tim.</p>
+                    <p>Ini hanya menampilkan sheet yang nama-nya bulan (contoh: Februari, Maret, April), lalu merinci target/realisasi per tim.</p>
                 </div>
             </div>
         @endif

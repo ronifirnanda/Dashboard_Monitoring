@@ -130,10 +130,10 @@
                             <td>{{ $row['no'] }}</td>
                             <td><span class="badge text-bg-light border">{{ $row['sheet'] }}</span></td>
                             <td>{{ $row['tim_display'] ?? '-' }}</td>
-                            <td>{{ $row['nominal_rpd'] }}</td>
+                            <td>{{ $row['nominal_rpd_display'] ?? $row['nominal_rpd'] }}</td>
                             <td>{{ $row['deviasi'] }}</td>
                             <td>{{ $row['uraian'] }}</td>
-                            <td>{{ $row['nominal_pengajuan'] }}</td>
+                            <td>{{ $row['nominal_pengajuan_display'] ?? $row['nominal_pengajuan'] }}</td>
                         </tr>
                     @endforeach
                 </tbody>

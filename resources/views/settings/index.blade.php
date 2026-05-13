@@ -4,10 +4,6 @@
 
 @section('subtitle', 'Kelola konfigurasi aplikasi monitoring Anda.')
 
-@section('page-actions')
-<a href="{{ route('overview') }}" class="btn-pill btn-outline-soft"><i class="bi bi-arrow-left me-2"></i>Kembali</a>
-@endsection
-
 @section('content')
 <div class="settings-container">
     @if($errors->any())
@@ -31,7 +27,8 @@
         </div>
     @endif
 
-    <div class="settings-card">
+    <div class="settings-layout">
+    <div class="settings-card settings-main-card">
         <div class="settings-header">
             <div>
                 <h3 class="settings-title">Google Sheets Configuration</h3>
@@ -79,6 +76,7 @@
         </form>
     </div>
 
+    <div class="settings-card settings-side-card">
     <div class="settings-info">
         <div class="info-box">
             <i class="bi bi-lightbulb"></i>
@@ -102,12 +100,21 @@
             </div>
         </div>
     </div>
+    </div>
 </div>
 
 <style>
     .settings-container {
-        max-width: 700px;
-        margin: 0 auto;
+        max-width: none;
+        width: 100%;
+        margin: 0;
+    }
+
+    .settings-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.95fr);
+        gap: 1.5rem;
+        align-items: start;
     }
 
     .settings-card {
@@ -116,7 +123,12 @@
         border-radius: 1.25rem;
         padding: 2rem;
         box-shadow: 0 10px 28px rgba(24, 59, 40, 0.05);
-        margin-bottom: 1.5rem;
+        margin-bottom: 0;
+    }
+
+    .settings-main-card,
+    .settings-side-card {
+        min-width: 0;
     }
 
     .settings-header {
@@ -245,7 +257,9 @@
     }
 
     .settings-info {
-        margin-top: 2rem;
+        margin-top: 0;
+        display: grid;
+        gap: 1rem;
     }
 
     .info-box {
@@ -325,6 +339,26 @@
     .alert-success {
         background-color: rgba(40, 167, 69, 0.1);
         color: #155724;
+    }
+
+    @media (max-width: 992px) {
+        .settings-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .settings-card {
+            padding: 1.25rem;
+        }
+
+        .settings-header {
+            flex-direction: column;
+        }
+
+        .form-actions {
+            flex-direction: column;
+        }
     }
 </style>
 

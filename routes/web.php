@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\LoginController;
+use App\Http\Controllers\ProfileController;
 
 Route::redirect('/login', '/admin/login');
 Route::redirect('/admin', '/admin/login');
@@ -14,6 +15,12 @@ Route::get('/overview', [DashboardController::class, 'overview'])->name('overvie
 Route::get('/keutata', [DashboardController::class, 'keutata'])->name('keutata');
 Route::get('/archive', [DashboardController::class, 'archive'])->name('archive');
 Route::get('/archive/load/{id}', [DashboardController::class, 'archiveLoad'])->name('archive.load');
+
+// Profile (authenticated users)
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+});
 
 // Admin area
 Route::prefix('admin')->name('admin.')->group(function () {

@@ -885,6 +885,9 @@ class DashboardController extends Controller
                 'realisasi' => trim((string) $sheet->getCell(($detectedColumns['realisasi'] ?? ($detectedColumns['nominal_pengajuan'] ?? 'F')).$row)->getFormattedValue()),
             ];
 
+            $parsedRow['nominal_rpd_display'] = $this->formatMoneyDisplay($parsedRow['nominal_rpd']);
+            $parsedRow['nominal_pengajuan_display'] = $this->formatMoneyDisplay($parsedRow['nominal_pengajuan']);
+
             $resolvedTeam = $this->resolveTeamLabel($parsedRow);
 
             $parsedRow['tim_display'] = $resolvedTeam;
@@ -966,6 +969,8 @@ class DashboardController extends Controller
                     'target' => $target,
                     'realisasi' => $realisasi,
                     'tim_display' => $team,
+                    'nominal_rpd_display' => $this->formatMoneyDisplay($target),
+                    'nominal_pengajuan_display' => $this->formatMoneyDisplay($realisasi),
                 ];
             }
         }
@@ -1411,6 +1416,25 @@ class DashboardController extends Controller
         }
 
         return (float) $normalized;
+    }
+
+    private function formatMoneyDisplay(string|float|int|null $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return number_format((float) $value, 0, ',', '.');
+        }
+
+        $normalized = $this->normalizeToNumber((string) $value);
+
+        if ($normalized === null) {
+            return trim((string) $value);
+        }
+
+        return number_format($normalized, 0, ',', '.');
     }
 
     public function archive(): View

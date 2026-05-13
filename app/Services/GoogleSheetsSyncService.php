@@ -7,6 +7,7 @@ use App\Models\Upload;
 use Google\Client;
 use Google\Service\Sheets;
 use Illuminate\Support\Facades\File;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -79,7 +80,7 @@ class GoogleSheetsSyncService
             foreach ($rows as $rowIndex => $row) {
                 foreach ($row as $columnIndex => $cellValue) {
                     $cellAddress = Coordinate::stringFromColumnIndex($columnIndex + 1).($rowIndex + 1);
-                    $worksheet->setCellValue($cellAddress, (string) $cellValue);
+                    $worksheet->setCellValueExplicit($cellAddress, (string) $cellValue, DataType::TYPE_STRING);
                 }
             }
         }

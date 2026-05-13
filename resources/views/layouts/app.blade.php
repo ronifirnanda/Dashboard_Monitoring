@@ -862,7 +862,7 @@
     <div class="app-shell">
         <aside class="sidebar">
             <div class="brand">
-                <img src="{{ asset('asset/logo bps.png') }}" alt="BPS Logo">
+                <img src="{{ asset('asset/bps.png') }}" alt="BPS Logo">
                 <div class="brand-copy">
                     <strong>Monitoring</strong>
                     <span>BPS Dashboard</span>
@@ -939,17 +939,24 @@
                     @if(auth()->check() && auth()->user()->role === 'admin')
                         <div class="profile-chip">
                             <div class="avatar">
-                                <img src="https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->name ?? 'Admin') }}&background=efc7b7&color=2b2b2b" alt="{{ auth()->user()->name ?? 'Admin' }}">
+                                @if(!empty(auth()->user()->avatar))
+                                    <img src="{{ asset('storage/' . auth()->user()->avatar) }}" alt="{{ auth()->user()->name ?? 'Admin' }}">
+                                @else
+                                    <img src="https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->name ?? 'Admin') }}&background=efc7b7&color=2b2b2b" alt="{{ auth()->user()->name ?? 'Admin' }}">
+                                @endif
                             </div>
                             <div class="profile-copy">
-                                <strong>{{ auth()->user()->name ?? 'Admin' }}</strong>
-                                <span>{{ auth()->user()->email ?? '' }}</span>
+                                    <strong>{{ auth()->user()->name ?? 'Admin' }}</strong>
+                                    <span>{{ auth()->user()->email ?? '' }}</span>
+                                </div>
                             </div>
-                        </div>
-                        <form action="{{ route('admin.logout') }}" method="POST" style="margin:0;">
-                            @csrf
-                            <button type="submit" class="btn-pill btn-outline-soft border-0">Logout</button>
-                        </form>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <a href="{{ route('profile.edit') }}" class="btn-pill btn-outline-soft" style="font-size:0.9rem; padding:8px 12px;">Edit Profil</a>
+                                <form action="{{ route('admin.logout') }}" method="POST" style="margin:0;">
+                                    @csrf
+                                    <button type="submit" class="btn-pill btn-outline-soft border-0">Logout</button>
+                                </form>
+                            </div>
                     @else
                         <a href="{{ route('admin.login') }}" class="btn-pill btn-primary-soft border-0">Login Admin</a>
                     @endif
@@ -959,7 +966,7 @@
             <section class="page-head">
                 <div>
                     <h1 class="page-title">@yield('title', 'Dashboard')</h1>
-                    <p class="page-subtitle">@yield('subtitle', 'Plan, prioritize, and monitor your work from a clean and focused workspace.') </p>
+                    <p class="page-subtitle">@yield('subtitle', '')</p>
                 </div>
                 <div class="page-actions">
                     @yield('page-actions')
