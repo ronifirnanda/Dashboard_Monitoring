@@ -247,7 +247,7 @@
         </div>
 
         @if($selectedUploadMode === 'manual')
-            <form id="upload" action="{{ route('admin.keutata.import') }}" method="POST" enctype="multipart/form-data">
+            <form id="upload" action="{{ route('keutata.import') }}" method="POST" enctype="multipart/form-data">
                 @csrf
 
                 @if(session('success'))
@@ -306,7 +306,7 @@
                 </div>
 
                 <div class="upload-auto-row">
-                    <form action="{{ route('admin.keutata.sync-google-sheet') }}" method="POST" style="margin:0;">
+                    <form action="{{ route('keutata.sync-google-sheet') }}" method="POST" style="margin:0;">
                         @csrf
                         <button type="submit" class="btn-pill btn-primary-soft border-0">
                             <i class="bi bi-cloud-arrow-down me-2"></i>Sync dari Google Sheets

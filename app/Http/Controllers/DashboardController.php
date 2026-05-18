@@ -6,6 +6,7 @@ use App\Models\Upload;
 use App\Services\GoogleSheetsSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
@@ -25,6 +26,8 @@ class DashboardController extends Controller
                 'excel_file_name' => $viewData['fileName'],
                 'excel_analysis' => $viewData['analysis'],
                 'excel_raw_sheets' => $viewData['rawSheets'],
+                // indicate this load did NOT originate from archive
+                'keutata_loaded_from_archive' => false,
             ]);
 
             return redirect()->route('keutata', ['upload' => $upload->id])->with('success', 'Sinkronisasi Google Sheets berhasil.');
@@ -138,6 +141,8 @@ class DashboardController extends Controller
                 'excel_file_name' => $viewData['fileName'],
                 'excel_analysis' => $viewData['analysis'],
                 'excel_raw_sheets' => $viewData['rawSheets'],
+                // imports are treated as non-archive loads by default
+                'keutata_loaded_from_archive' => false,
             ]);
 
             return redirect()->route('keutata', ['upload' => $upload->id])->with('success', 'File Excel berhasil diupload dan dipelajari.');
@@ -202,13 +207,120 @@ class DashboardController extends Controller
             'fileName' => $viewData['fileName'],
             'error' => null,
             'analysis' => $viewData['analysis'],
+            'selectedUploadId' => $viewData['selectedUploadId'] ?? null,
             'rawSheets' => $displayRawSheets,
             'sheetOptions' => $sheetOptions,
             'selectedSheet' => $selectedSheet,
             'selectedSheetData' => $selectedSheetData,
             'monthOptions' => $monthOptions,
             'selectedMonth' => $selectedMonth,
+            // Admin can edit when either loaded from archive or explicitly enabled via toggle
+            'isAdminMode' => Auth::check() && Auth::user()?->role === 'admin' && (
+                session('keutata_loaded_from_archive') === true || session('keutata_edit_enabled') === true
+            ),
+            'keutata_edit_enabled' => session('keutata_edit_enabled') === true,
             'success' => session('success'),
+        ]);
+    }
+
+    public function toggleKeutataEditMode(Request $request)
+    {
+        $enabledRaw = $request->input('enabled');
+        $enabled = filter_var($enabledRaw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
+        if ($enabled === null) {
+            return response()->json(['message' => 'Invalid enabled parameter'], 422);
+        }
+
+        session(['keutata_edit_enabled' => $enabled]);
+
+        return response()->json(['enabled' => session('keutata_edit_enabled') === true]);
+    }
+
+    public function updateKeutataCell(Request $request, GoogleSheetsSyncService $sheetsSyncService)
+    {
+        $validated = $request->validate([
+            'upload_id' => ['required', 'integer', 'exists:uploads,id'],
+            'sheet' => ['required', 'string', 'max:31'],
+            'cell' => ['required', 'string', 'regex:/^[A-Z]+[1-9][0-9]*$/'],
+            'value' => ['nullable', 'string'],
+        ]);
+
+        $upload = Upload::findOrFail($validated['upload_id']);
+        $storagePath = storage_path('app/private/'.$upload->file_path);
+
+        if (! file_exists($storagePath)) {
+            return response()->json([
+                'message' => 'File Excel tidak ditemukan.',
+            ], 404);
+        }
+
+        try {
+            $spreadsheet = IOFactory::load($storagePath);
+            $worksheet = $spreadsheet->getSheetByName($validated['sheet']);
+
+            if ($worksheet === null) {
+                return response()->json([
+                    'message' => 'Sheet tidak ditemukan.',
+                ], 404);
+            }
+
+            $worksheet->setCellValue($validated['cell'], (string) ($validated['value'] ?? ''));
+
+            $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
+            $writer->save($storagePath);
+            $spreadsheet->disconnectWorksheets();
+
+            $viewData = $this->loadUploadViewData($upload);
+
+            session([
+                'excel_rows' => $viewData['rows'],
+                'excel_file_name' => $viewData['fileName'],
+                'excel_analysis' => $viewData['analysis'],
+                'excel_raw_sheets' => $viewData['rawSheets'],
+            ]);
+
+            $syncedToGoogleSheet = false;
+            $googleSyncError = null;
+
+            if (($upload->analysis_data['source'] ?? null) === 'google_sheets') {
+                try {
+                    $sheetsSyncService->updateCellInSpreadsheet(
+                        $upload,
+                        $validated['sheet'],
+                        $validated['cell'],
+                        (string) ($validated['value'] ?? '')
+                    );
+                    $syncedToGoogleSheet = true;
+                } catch (Throwable $syncException) {
+                    $googleSyncError = $syncException->getMessage();
+                }
+            }
+
+            return response()->json([
+                'message' => 'Sel berhasil diperbarui.',
+                'cell' => $validated['cell'],
+                'value' => (string) ($validated['value'] ?? ''),
+                'synced_to_google_sheet' => $syncedToGoogleSheet,
+                'google_sync_error' => $googleSyncError,
+            ]);
+        } catch (Throwable $e) {
+            return response()->json([
+                'message' => 'Gagal menyimpan perubahan: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Return a small JSON fragment with updated overview stats for the current upload.
+     */
+    public function keutataFragment(Request $request)
+    {
+        $viewData = $this->resolveKeutataViewData($request->query('upload'));
+
+        return response()->json([
+            'fileName' => $viewData['fileName'] ?? null,
+            'rows_count' => is_array($viewData['rows']) ? count($viewData['rows']) : 0,
         ]);
     }
 
@@ -233,6 +345,7 @@ class DashboardController extends Controller
                 'fileName' => $sessionFileName,
                 'analysis' => is_array($sessionAnalysis) ? $sessionAnalysis : [],
                 'rawSheets' => is_array($sessionRawSheets) ? $sessionRawSheets : [],
+                'selectedUploadId' => null,
             ];
         }
 
@@ -247,6 +360,7 @@ class DashboardController extends Controller
             'fileName' => null,
             'analysis' => [],
             'rawSheets' => [],
+            'selectedUploadId' => null,
         ];
     }
 
@@ -260,11 +374,15 @@ class DashboardController extends Controller
                 'fileName' => $upload->file_name,
                 'analysis' => $upload->analysis_data ?? [],
                 'rawSheets' => [],
+                'selectedUploadId' => $upload->id,
             ];
         }
 
         $spreadsheet = IOFactory::load($storagePath);
-        return $this->buildKeutataViewData($spreadsheet, $upload->file_name);
+        $viewData = $this->buildKeutataViewData($spreadsheet, $upload->file_name);
+        $viewData['selectedUploadId'] = $upload->id;
+
+        return $viewData;
     }
 
     private function buildKeutataViewData($spreadsheet, ?string $fileName): array
@@ -288,6 +406,7 @@ class DashboardController extends Controller
             'analysis' => $analysis,
             'rawSheets' => $rawSheets,
             'error' => null,
+            'selectedUploadId' => null,
         ];
     }
 
@@ -1466,6 +1585,8 @@ class DashboardController extends Controller
                 'excel_file_name' => $viewData['fileName'],
                 'excel_analysis' => $viewData['analysis'],
                 'excel_raw_sheets' => $viewData['rawSheets'],
+                // mark that this keutata load originated from archive so edit mode can be enabled
+                'keutata_loaded_from_archive' => true,
             ]);
 
             return redirect()->route('keutata', ['upload' => $upload->id])->with('success', 'File dari arsip berhasil dimuat: '.$upload->file_name);

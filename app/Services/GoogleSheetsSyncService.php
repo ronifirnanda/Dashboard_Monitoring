@@ -16,12 +16,44 @@ use RuntimeException;
 
 class GoogleSheetsSyncService
 {
+    public function updateCellInSpreadsheet(Upload $upload, string $sheetName, string $cellAddress, string $value): void
+    {
+        $spreadsheetId = trim((string) ($upload->analysis_data['spreadsheet_id'] ?? ''));
+
+        if ($spreadsheetId === '') {
+            throw new RuntimeException('Spreadsheet ID Google Sheets tidak tersedia untuk upload ini.');
+        }
+        // Ensure we resolve credentials path (same as sync flow) so client can be created reliably
+        [$cfgSpreadsheetId, $credentialsPath] = $this->resolveConnectionConfig();
+
+        if ($credentialsPath === '' || ! file_exists($credentialsPath)) {
+            throw new RuntimeException('File kredensial Google Sheets tidak ditemukan saat mencoba update: '.$credentialsPath);
+        }
+
+        $client = $this->makeClient(false, $credentialsPath);
+        $sheetsService = new Sheets($client);
+        $range = "'".str_replace("'", "''", $sheetName)."'!".$cellAddress;
+
+        $valueRange = new \Google\Service\Sheets\ValueRange([
+            'range' => $range,
+            'values' => [[ $value ]],
+        ]);
+
+        try {
+            $sheetsService->spreadsheets_values->update(
+                $spreadsheetId,
+                $range,
+                $valueRange,
+                ['valueInputOption' => 'USER_ENTERED']
+            );
+        } catch (\Google\Service\Exception $e) {
+            throw new RuntimeException('Gagal update ke Google Sheets: '.$e->getMessage(), $e->getCode(), $e);
+        }
+    }
+
     public function syncToUpload(): Upload
     {
-        // Coba ambil dari database dulu, kalau tidak ada gunakan .env
-        $dbSpreadsheetId = Setting::where('key', 'google_sheets_spreadsheet_id')->first()?->value;
-        $spreadsheetId = trim((string) ($dbSpreadsheetId ?? config('services.google_sheets.spreadsheet_id')));
-        $credentialsPath = trim((string) config('services.google_sheets.credentials_path'));
+        [$spreadsheetId, $credentialsPath] = $this->resolveConnectionConfig();
 
         if ($spreadsheetId === '') {
             throw new RuntimeException('GOOGLE_SHEETS_SPREADSHEET_ID belum diatur di .env.');
@@ -31,9 +63,7 @@ class GoogleSheetsSyncService
             throw new RuntimeException('File kredensial Google Sheets tidak ditemukan: '.$credentialsPath);
         }
 
-        $client = new Client();
-        $client->setAuthConfig($credentialsPath);
-        $client->setScopes([Sheets::SPREADSHEETS_READONLY]);
+        $client = $this->makeClient(true, $credentialsPath);
 
         $sheetsService = new Sheets($client);
         
@@ -115,9 +145,50 @@ class GoogleSheetsSyncService
         ]);
     }
 
+    private function makeClient(bool $readOnly = true, ?string $credentialsPath = null): Client
+    {
+        $resolvedCredentialsPath = trim((string) ($credentialsPath ?? config('services.google_sheets.credentials_path')));
+
+        if ($resolvedCredentialsPath === '' || ! file_exists($resolvedCredentialsPath)) {
+            throw new RuntimeException('File kredensial Google Sheets tidak ditemukan: '.$resolvedCredentialsPath);
+        }
+
+        $client = new Client();
+        $client->setAuthConfig($resolvedCredentialsPath);
+        $client->setScopes([
+            $readOnly ? Sheets::SPREADSHEETS_READONLY : Sheets::SPREADSHEETS,
+        ]);
+
+        return $client;
+    }
+
+    private function resolveConnectionConfig(): array
+    {
+        $dbSpreadsheetId = Setting::where('key', 'google_sheets_spreadsheet_id')->first()?->value;
+        $spreadsheetId = trim((string) ($dbSpreadsheetId ?? config('services.google_sheets.spreadsheet_id')));
+        $credentialsPath = trim((string) config('services.google_sheets.credentials_path'));
+
+        if ($spreadsheetId === '') {
+            throw new RuntimeException('GOOGLE_SHEETS_SPREADSHEET_ID belum diatur di .env.');
+        }
+
+        if ($credentialsPath === '' || ! file_exists($credentialsPath)) {
+            throw new RuntimeException('File kredensial Google Sheets tidak ditemukan: '.$credentialsPath);
+        }
+
+        return [$spreadsheetId, $credentialsPath];
+    }
+
     private function makeValidWorksheetTitle(string $title, array &$usedTitles): string
     {
-        $sanitized = str_replace(['*', ':', '/', '\\', '?', '[', ']'], ' ', $title);
+        // Remove control characters and other invalid characters for worksheet titles
+        // Excel/PhpSpreadsheet disallow characters like : \ / ? * [ ] and control chars (0x00-0x1F, 0x7F)
+        $sanitized = $title;
+        // Replace common invalid characters with space
+        $sanitized = str_replace(['*', ':', '/', '\\', '?', '[', ']'], ' ', $sanitized);
+        // Remove non-printable/control characters
+        $sanitized = preg_replace('/[\x00-\x1F\x7F]/u', ' ', $sanitized) ?? $sanitized;
+        // Normalize whitespace
         $sanitized = trim(preg_replace('/\s+/', ' ', $sanitized) ?? '');
 
         if ($sanitized === '') {

@@ -100,7 +100,7 @@
             color: #eff8f1;
             background:
                 linear-gradient(145deg, rgba(21, 75, 47, 0.92) 0%, rgba(22, 89, 54, 0.94) 45%, rgba(31, 107, 69, 0.96) 100%),
-                url('{{ asset('asset/logo bps.png') }}');
+                url('{{ asset('asset/bps.png') }}');
             background-size: cover;
             background-position: center;
             overflow: hidden;
@@ -287,13 +287,26 @@
         }
 
         .panel-head .mini-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: #f4f8f5;
+            border: 1px solid #dbe7df;
             font-size: 0.88rem;
             color: var(--muted);
             text-decoration: none;
+            font-weight: 700;
+            box-shadow: 0 8px 18px rgba(23, 49, 36, 0.05);
+            transition: all 0.2s ease;
         }
 
         .panel-head .mini-link:hover {
             color: var(--primary);
+            background: #eef7f1;
+            border-color: #cfe2d5;
+            transform: translateY(-1px);
         }
 
         .login-title {
@@ -423,14 +436,26 @@
         }
 
         .forgot-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: #f4f8f5;
+            border: 1px solid #dbe7df;
             text-decoration: none;
             color: var(--primary);
             font-weight: 700;
             font-size: 0.92rem;
+            box-shadow: 0 8px 18px rgba(23, 49, 36, 0.05);
+            transition: all 0.2s ease;
         }
 
         .forgot-link:hover {
-            text-decoration: underline;
+            text-decoration: none;
+            background: #eef7f1;
+            border-color: #cfe2d5;
+            transform: translateY(-1px);
         }
 
         .btn-login {
@@ -559,11 +584,11 @@
                     <div>
                         <div class="brand-lockup">
                             <div class="brand-mark">
-                                <img src="{{ asset('asset/logo bps.png') }}" alt="Logo BPS">
+                                <img src="{{ asset('asset/bps.png') }}" alt="Logo BPS">
                             </div>
                             <div class="brand-text">
-                                <strong>BPS</strong>
-                                <span>Monitoring Dashboard</span>
+                                <strong>Badan Pusat Statistik</strong>
+                                <strong>Kabupaten Mojokerto</strong>
                             </div>
                         </div>
 
@@ -575,23 +600,8 @@
                             <h1>Monitoring target dan realisasi RPD</h1>
                             <p>
                                 Masuk untuk mengelola sinkronisasi Google Sheets, upload Excel, pengaturan sumber data,
-                                serta arsip monitoring. Tampilan ini dibuat selaras dengan identitas hijau BPS yang tenang dan tegas.
+                                serta arsip monitoring.
                             </p>
-
-                            <div class="hero-metrics">
-                                <div class="metric-card">
-                                    <strong>1</strong>
-                                    <span>Dashboard terpadu</span>
-                                </div>
-                                <div class="metric-card">
-                                    <strong>2</strong>
-                                    <span>Data dari Excel & Sheets</span>
-                                </div>
-                                <div class="metric-card">
-                                    <strong>3</strong>
-                                    <span>Role admin terproteksi</span>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
@@ -601,7 +611,7 @@
                             Sistem Monitoring BPS
                         </div>
                         <div class="note">
-                            Gunakan akun admin untuk masuk ke area pengelolaan. User biasa tetap dapat melihat dashboard publik tanpa login.
+                            Gunakan akun admin untuk masuk ke area pengelolaan. Pengguna biasa tetap dapat melihat dashboard publik tanpa login.
                         </div>
                     </div>
                 </div>
@@ -613,7 +623,6 @@
                         <i class="bi bi-key-fill"></i>
                         Login Admin
                     </div>
-                    <a href="{{ route('overview') }}" class="mini-link">Lihat dashboard publik</a>
                 </div>
 
                 <div>
@@ -691,7 +700,7 @@
                             Ingat saya
                         </label>
 
-                        <a href="{{ route('overview') }}" class="forgot-link">Kembali ke dashboard</a>
+                        <a href="{{ route('overview') }}" class="forgot-link">Masuk Tanpa Login</a>
                     </div>
 
                     <button type="submit" class="btn-login">
@@ -699,10 +708,7 @@
                     </button>
                 </form>
 
-                <div class="login-foot">
-                    <div><strong>Tip:</strong> pastikan akun Anda ber-role admin.</div>
-                    <div>Admin URL: <strong>/admin/login</strong></div>
-                </div>
+                
             </section>
         </div>
     </div>

@@ -18,9 +18,9 @@
 
         <div class="d-flex gap-2 flex-wrap align-items-center mt-3">
             @if(!empty($fileName))
-                <span class="btn-pill btn-outline-soft py-2 px-3"><i class="bi bi-file-earmark-spreadsheet me-2"></i>{{ $fileName }}</span>
+                <span id="keutataFileNameBadge" class="btn-pill btn-outline-soft py-2 px-3"><i class="bi bi-file-earmark-spreadsheet me-2"></i>{{ $fileName }}</span>
             @endif
-            <span class="btn-pill btn-outline-soft py-2 px-3"><i class="bi bi-list-check me-2"></i>{{ count($rows) }} Rows</span>
+            <span id="keutataRowsBadge" class="btn-pill btn-outline-soft py-2 px-3"><i class="bi bi-list-check me-2"></i>{{ count($rows) }} Rows</span>
         </div>
 
         <div style="margin-top: 1rem; padding: 0.9rem; border: 1px solid #dfeee1; border-radius: 14px; background: #fbfefb;">
@@ -96,6 +96,27 @@
         </div>
     @endif
 
+    @if(!empty($isAdminMode) && !empty($selectedUploadId))
+        <div class="alert alert-info border-0 rounded-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div>
+                <strong>Mode edit admin aktif.</strong>
+                Semua sel pada sheet yang dipilih bisa diedit langsung dan akan disimpan ke file Excel.
+            </div>
+            <span class="btn-pill btn-outline-soft py-1 px-3" id="keutataSaveStatus">Siap mengedit</span>
+        </div>
+    @endif
+    @if(Auth::check() && Auth::user()?->role === 'admin')
+        <div class="d-flex gap-2 align-items-center mb-3">
+            <form id="keutataToggleForm" onsubmit="return false;">
+                <input type="hidden" name="enabled" id="keutataToggleInput" value="{{ $keutata_edit_enabled ? '1' : '0' }}">
+                <button id="keutataToggleButton" class="btn btn-sm btn-outline-primary">
+                    {{ $keutata_edit_enabled ? 'Matikan mode edit' : 'Aktifkan mode edit' }}
+                </button>
+            </form>
+            <small class="text-muted">Mode edit hanya tersedia untuk admin. Toggle untuk mengaktifkan/mematikan.</small>
+        </div>
+    @endif
+
     @if(empty($rawSheets) && empty($rows))
         <div class="reminder-card">
             <div>
@@ -167,8 +188,24 @@
                         @foreach($selectedSheetData['rows'] as $rawRow)
                             <tr>
                                 <td style="font-weight: 600; color: #5e6f60; background: #fff; position: sticky; left: 0; z-index: 1;">{{ $rawRow['row_number'] }}</td>
-                                @foreach($rawRow['cells'] as $cell)
-                                    <td style="white-space: nowrap; min-width: 150px;">{{ $cell }}</td>
+                                @foreach($rawRow['cells'] as $cellIndex => $cell)
+                                    @php
+                                        $columnLetter = $selectedSheetData['columns'][$cellIndex] ?? null;
+                                        $cellAddress = $columnLetter ? $columnLetter.$rawRow['row_number'] : null;
+                                        $isEditableCell = !empty($isAdminMode) && !empty($selectedUploadId) && $columnLetter !== null;
+                                    @endphp
+                                    <td
+                                        style="white-space: nowrap; min-width: 150px; {{ $isEditableCell ? 'background: #fffdf4; cursor: text;' : '' }}"
+                                        @if($isEditableCell)
+                                            contenteditable="true"
+                                            spellcheck="false"
+                                            data-editable-cell="true"
+                                            data-cell-address="{{ $cellAddress }}"
+                                            data-sheet-name="{{ $selectedSheetData['sheet'] }}"
+                                            data-upload-id="{{ $selectedUploadId }}"
+                                            data-original-value="{{ $cell }}"
+                                        @endif
+                                    >{{ $cell }}</td>
                                 @endforeach
                             </tr>
                         @endforeach
@@ -178,4 +215,173 @@
         </div>
     @endif
 </div>
+
+@push('scripts')
+@if(!empty($isAdminMode) && !empty($selectedUploadId) && !empty($selectedSheetData))
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const cells = document.querySelectorAll('[data-editable-cell="true"]');
+    const statusBadge = document.getElementById('keutataSaveStatus');
+    const saveUrl = @json(route('keutata.update-cell'));
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    if (!cells.length || !statusBadge || !csrfToken) {
+        return;
+    }
+
+    const variants = {
+        idle: { border: '#d7e2d9', background: '#ffffff', color: '#304935' },
+        saving: { border: '#c7e0fb', background: '#e7f3ff', color: '#205d93' },
+        success: { border: '#cdeccf', background: '#edf9ef', color: '#2f6b3f' },
+        error: { border: '#f2c6c6', background: '#fff0f0', color: '#a33a3a' },
+    };
+
+    const setStatus = (text, variant) => {
+        statusBadge.textContent = text;
+        statusBadge.style.borderColor = variant.border;
+        statusBadge.style.background = variant.background;
+        statusBadge.style.color = variant.color;
+    };
+
+    const normalizeValue = (cell) => (cell.textContent || '').replace(/\u00a0/g, ' ').trimEnd();
+
+    const saveCell = async (cell) => {
+        const originalValue = cell.dataset.originalValue ?? '';
+        const currentValue = normalizeValue(cell);
+
+        if (currentValue === originalValue) {
+            return;
+        }
+
+        cell.dataset.originalValue = currentValue;
+        setStatus('Menyimpan...', variants.saving);
+        cell.style.opacity = '0.7';
+
+        try {
+            const response = await fetch(saveUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    upload_id: cell.dataset.uploadId,
+                    sheet: cell.dataset.sheetName,
+                    cell: cell.dataset.cellAddress,
+                    value: currentValue,
+                }),
+            });
+
+            const payload = await response.json();
+
+            if (!response.ok) {
+                throw new Error(payload.message || 'Gagal menyimpan perubahan.');
+            }
+
+            cell.textContent = payload.value ?? '';
+            cell.dataset.originalValue = payload.value ?? '';
+            setStatus(
+                payload.synced_to_google_sheet
+                    ? 'Tersimpan & Google Sheet diperbarui'
+                    : 'Tersimpan',
+                variants.success
+            );
+
+            if (payload.google_sync_error) {
+                window.setTimeout(() => setStatus('Tersimpan, sinkron Google gagal', variants.error), 1600);
+            }
+
+            // Refresh dashboard fragment (file name / rows) so summaries update immediately
+            try {
+                const selectedUploadId = @json($selectedUploadId ?? null);
+                const fragmentBase = @json(route('keutata.fragment'));
+                const fragmentUrl = selectedUploadId ? `${fragmentBase}?upload=${encodeURIComponent(selectedUploadId)}` : fragmentBase;
+                fetch(fragmentUrl, { headers: { 'Accept': 'application/json' } })
+                    .then(r => r.ok ? r.json() : Promise.reject(new Error('Gagal memuat ringkasan')))
+                    .then(data => {
+                        if (data.fileName !== undefined) {
+                            const fileBadge = document.getElementById('keutataFileNameBadge');
+                            if (fileBadge) fileBadge.textContent = data.fileName;
+                        }
+                        if (data.rows_count !== undefined) {
+                            const rowsBadge = document.getElementById('keutataRowsBadge');
+                            if (rowsBadge) rowsBadge.textContent = (data.rows_count || 0) + ' Rows';
+                        }
+                    })
+                    .catch(() => {
+                        // ignore fragment refresh errors silently
+                    });
+            } catch (e) {
+                // noop
+            }
+
+            window.setTimeout(() => setStatus('Siap mengedit', variants.idle), 1400);
+        } catch (error) {
+            cell.textContent = originalValue;
+            cell.dataset.originalValue = originalValue;
+            setStatus(error.message || 'Gagal menyimpan.', variants.error);
+            window.setTimeout(() => setStatus('Siap mengedit', variants.idle), 2200);
+        } finally {
+            cell.style.opacity = '';
+        }
+    };
+
+    cells.forEach((cell) => {
+        cell.addEventListener('focus', () => {
+            cell.dataset.originalValue = normalizeValue(cell);
+        });
+
+        cell.addEventListener('blur', () => {
+            void saveCell(cell);
+        });
+
+        cell.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                cell.blur();
+            }
+        });
+
+        cell.addEventListener('paste', (event) => {
+            event.preventDefault();
+            const text = event.clipboardData?.getData('text/plain') ?? '';
+            document.execCommand('insertText', false, text);
+        });
+    });
+});
+</script>
+@endif
+@endpush
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const toggleBtn = document.getElementById('keutataToggleButton');
+    const toggleInput = document.getElementById('keutataToggleInput');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    if (!toggleBtn || !toggleInput || !csrfToken) return;
+
+    toggleBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        const enabled = toggleInput.value === '1' ? 0 : 1;
+
+        fetch(@json(route('keutata.toggle-edit')), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ enabled: !!enabled }),
+        }).then(r => r.json()).then(data => {
+            // reload to re-render editable cells server-side
+            window.location.reload();
+        }).catch(() => {
+            alert('Gagal mengubah mode edit.');
+        });
+    });
+});
+</script>
+@endpush
 @endsection

@@ -6,15 +6,17 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\ProfileController;
 
-Route::redirect('/login', '/admin/login');
+Route::redirect('/login', '/admin/login')->name('login');
 Route::redirect('/admin', '/admin/login');
 
-// Public dashboard routes for everyone
-Route::get('/', [DashboardController::class, 'overview'])->name('overview');
-Route::get('/overview', [DashboardController::class, 'overview'])->name('overview.alt');
+// Public entry redirects to admin login first
+Route::redirect('/', '/admin/login');
+Route::get('/overview', [DashboardController::class, 'overview'])->name('overview');
 Route::get('/keutata', [DashboardController::class, 'keutata'])->name('keutata');
 Route::get('/archive', [DashboardController::class, 'archive'])->name('archive');
 Route::get('/archive/load/{id}', [DashboardController::class, 'archiveLoad'])->name('archive.load');
+Route::post('/admin/keutata/import', [DashboardController::class, 'importKeutata'])->name('keutata.import');
+Route::post('/admin/keutata/sync-google-sheet', [DashboardController::class, 'syncGoogleSheet'])->name('keutata.sync-google-sheet');
 
 // Profile (authenticated users)
 Route::middleware('auth')->group(function () {
@@ -29,12 +31,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     Route::middleware(['auth', 'admin'])->group(function () {
         Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
-        Route::post('/keutata/import', [DashboardController::class, 'importKeutata'])->name('keutata.import');
-        Route::post('/keutata/sync-google-sheet', [DashboardController::class, 'syncGoogleSheet'])->name('keutata.sync-google-sheet');
         Route::delete('/archive/{id}', [DashboardController::class, 'archiveDelete'])->name('archive.delete');
         Route::post('/archive/bulk-delete', [DashboardController::class, 'archiveBulkDelete'])->name('archive.bulk-delete');
         Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
         Route::post('/settings/google-sheets', [SettingController::class, 'updateGoogleSheets'])->name('settings.update-google-sheets');
     });
+});
+
+Route::middleware(['auth', 'admin'])->group(function () {
+    Route::post('/admin/keutata/cell', [DashboardController::class, 'updateKeutataCell'])->name('keutata.update-cell');
+    Route::get('/admin/keutata/fragment', [DashboardController::class, 'keutataFragment'])->name('keutata.fragment');
+    Route::post('/admin/keutata/toggle-edit', [DashboardController::class, 'toggleKeutataEditMode'])->name('keutata.toggle-edit');
 });
 
