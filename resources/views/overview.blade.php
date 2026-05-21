@@ -357,7 +357,7 @@
                     <div class="panel-title">Belanja Barang</div>
                     <div class="panel-small">Target vs Realisasi untuk Belanja Barang.</div>
                 </div>
-                <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle" data-bs-toggle="modal" data-bs-target="#modalBelanjaBarang" title="Penjelasan grafik">
+                <button type="button" class="btn btn-sm btn-primary shadow-sm rounded-circle" data-bs-toggle="modal" data-bs-target="#modalBelanjaBarang" aria-label="Perjelas grafik Belanja Barang" title="Perjelas grafik">
                     <i class="bi bi-info-circle"></i>
                 </button>
             </div>
@@ -464,7 +464,7 @@
                     <div class="panel-title">Belanja Pegawai</div>
                     <div class="panel-small">Target vs Realisasi untuk Belanja Pegawai.</div>
                 </div>
-                <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle" data-bs-toggle="modal" data-bs-target="#modalBelanjaPegawai" title="Penjelasan grafik">
+                <button type="button" class="btn btn-sm btn-primary shadow-sm rounded-circle" data-bs-toggle="modal" data-bs-target="#modalBelanjaPegawai" aria-label="Perjelas grafik Belanja Pegawai" title="Perjelas grafik">
                     <i class="bi bi-info-circle"></i>
                 </button>
             </div>
@@ -576,7 +576,7 @@
                     <div class="panel-title">Rekap Anggaran per Tim</div>
                     <div class="panel-small">Rekap anggaran tahunan per tim dari sheet workbook.</div>
                 </div>
-                <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle" data-bs-toggle="modal" data-bs-target="#modalRekapAnggaran" title="Penjelasan grafik">
+                <button type="button" class="btn btn-sm btn-primary shadow-sm rounded-circle" data-bs-toggle="modal" data-bs-target="#modalRekapAnggaran" aria-label="Perjelas grafik Rekap Anggaran" title="Perjelas grafik">
                     <i class="bi bi-info-circle"></i>
                 </button>
             </div>
@@ -642,7 +642,7 @@
                     <div class="panel-title">Laporan Penyerapan Anggaran</div>
                     <div class="panel-small">Progres penyerapan anggaran dari sheet workbook.</div>
                 </div>
-                <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle" data-bs-toggle="modal" data-bs-target="#modalLaporanPenyerapan" title="Penjelasan grafik">
+                <button type="button" class="btn btn-sm btn-primary shadow-sm rounded-circle" data-bs-toggle="modal" data-bs-target="#modalLaporanPenyerapan" aria-label="Perjelas grafik Laporan Penyerapan" title="Perjelas grafik">
                     <i class="bi bi-info-circle"></i>
                 </button>
             </div>
@@ -702,7 +702,7 @@
 </section>
 
 <!-- Modal Belanja Barang - Expanded -->
-<div class="modal fade" id="modalBelanjaBarang" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="modalBelanjaBarang" tabindex="-1" aria-hidden="true" data-bs-backdrop="false">
     <div class="modal-dialog modal-xl">
         <div class="modal-content rounded-4 border-0">
             <div class="modal-header bg-gradient" style="background: linear-gradient(135deg, #1f6b45 0%, #2f8b59 100%); color: white; border: none;">
@@ -816,7 +816,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </div>
 
 <!-- Modal Belanja Pegawai - Expanded -->
-<div class="modal fade" id="modalBelanjaPegawai" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="modalBelanjaPegawai" tabindex="-1" aria-hidden="true" data-bs-backdrop="false">
     <div class="modal-dialog modal-xl">
         <div class="modal-content rounded-4 border-0">
             <div class="modal-header bg-gradient" style="background: linear-gradient(135deg, #38503f 0%, #4b6a56 100%); color: white; border: none;">
@@ -903,7 +903,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </div>
 
 <!-- Modal Rekap Anggaran per Tim - Expanded -->
-<div class="modal fade" id="modalRekapAnggaran" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="modalRekapAnggaran" tabindex="-1" aria-hidden="true" data-bs-backdrop="false">
     <div class="modal-dialog modal-xl">
         <div class="modal-content rounded-4 border-0">
             <div class="modal-header bg-gradient" style="background: linear-gradient(135deg, #5a6f64 0%, #7a8f84 100%); color: white; border: none;">
@@ -972,7 +972,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </div>
 
 <!-- Modal Laporan Penyerapan Anggaran - Expanded -->
-<div class="modal fade" id="modalLaporanPenyerapan" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="modalLaporanPenyerapan" tabindex="-1" aria-hidden="true" data-bs-backdrop="false">
     <div class="modal-dialog modal-xl">
         <div class="modal-content rounded-4 border-0">
             <div class="modal-header bg-gradient" style="background: linear-gradient(135deg, #2d5a3d 0%, #4a7a56 100%); color: white; border: none;">

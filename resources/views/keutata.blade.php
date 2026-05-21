@@ -97,23 +97,15 @@
     @endif
 
     @if(!empty($isAdminMode) && !empty($selectedUploadId))
-        <div class="alert alert-info border-0 rounded-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="alert alert-info border-0 rounded-4">
             <div>
-                <strong>Mode edit admin aktif.</strong>
-                Semua sel pada sheet yang dipilih bisa diedit langsung dan akan disimpan ke file Excel.
+                <strong>Mode edit aktif.</strong>
+                <div style="margin-top:6px; color: #28503a;">Ubah sel langsung lalu klik simpan agar perubahan masuk ke file Excel dan Google Sheets bila terhubung.</div>
             </div>
-            <span class="btn-pill btn-outline-soft py-1 px-3" id="keutataSaveStatus">Siap mengedit</span>
-        </div>
-    @endif
-    @if(Auth::check() && Auth::user()?->role === 'admin')
-        <div class="d-flex gap-2 align-items-center mb-3">
-            <form id="keutataToggleForm" onsubmit="return false;">
-                <input type="hidden" name="enabled" id="keutataToggleInput" value="{{ $keutata_edit_enabled ? '1' : '0' }}">
-                <button id="keutataToggleButton" class="btn btn-sm btn-outline-primary">
-                    {{ $keutata_edit_enabled ? 'Matikan mode edit' : 'Aktifkan mode edit' }}
-                </button>
-            </form>
-            <small class="text-muted">Mode edit hanya tersedia untuk admin. Toggle untuk mengaktifkan/mematikan.</small>
+            <div class="mt-3">
+                <span class="btn-pill btn-outline-soft py-1 px-3 me-2" id="keutataSaveStatus">Belum ada perubahan</span>
+                <button type="button" class="btn btn-sm btn-primary" id="keutataSaveButton">Simpan perubahan</button>
+            </div>
         </div>
     @endif
 
@@ -203,7 +195,7 @@
                                             data-cell-address="{{ $cellAddress }}"
                                             data-sheet-name="{{ $selectedSheetData['sheet'] }}"
                                             data-upload-id="{{ $selectedUploadId }}"
-                                            data-original-value="{{ $cell }}"
+                                            data-original-value="{{ e($cell) }}"
                                         @endif
                                     >{{ $cell }}</td>
                                 @endforeach
@@ -220,21 +212,27 @@
 @if(!empty($isAdminMode) && !empty($selectedUploadId) && !empty($selectedSheetData))
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const cells = document.querySelectorAll('[data-editable-cell="true"]');
+    const cells = Array.from(document.querySelectorAll('[data-editable-cell="true"]'));
+    const saveButton = document.getElementById('keutataSaveButton');
     const statusBadge = document.getElementById('keutataSaveStatus');
     const saveUrl = @json(route('keutata.update-cell'));
+    const fragmentBase = @json(route('keutata.fragment'));
+    const selectedUploadId = @json($selectedUploadId ?? null);
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
-    if (!cells.length || !statusBadge || !csrfToken) {
+    if (!cells.length || !saveButton || !statusBadge || !csrfToken) {
         return;
     }
 
     const variants = {
         idle: { border: '#d7e2d9', background: '#ffffff', color: '#304935' },
+        dirty: { border: '#f0d48a', background: '#fff7df', color: '#8b6512' },
         saving: { border: '#c7e0fb', background: '#e7f3ff', color: '#205d93' },
         success: { border: '#cdeccf', background: '#edf9ef', color: '#2f6b3f' },
         error: { border: '#f2c6c6', background: '#fff0f0', color: '#a33a3a' },
     };
+
+    const dirtyCells = new Set();
 
     const setStatus = (text, variant) => {
         statusBadge.textContent = text;
@@ -245,16 +243,57 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const normalizeValue = (cell) => (cell.textContent || '').replace(/\u00a0/g, ' ').trimEnd();
 
+    const setDirtyState = (cell, isDirty) => {
+        cell.dataset.dirty = isDirty ? '1' : '0';
+        cell.style.background = isDirty ? '#fff7df' : '#fffdf4';
+
+        if (isDirty) {
+            dirtyCells.add(cell);
+        } else {
+            dirtyCells.delete(cell);
+        }
+
+        saveButton.disabled = dirtyCells.size === 0;
+        statusBadge.textContent = dirtyCells.size > 0 ? `${dirtyCells.size} perubahan belum disimpan` : 'Belum ada perubahan';
+        statusBadge.style.borderColor = dirtyCells.size > 0 ? variants.dirty.border : variants.idle.border;
+        statusBadge.style.background = dirtyCells.size > 0 ? variants.dirty.background : variants.idle.background;
+        statusBadge.style.color = dirtyCells.size > 0 ? variants.dirty.color : variants.idle.color;
+    };
+
+    const refreshSummary = async () => {
+        const fragmentUrl = selectedUploadId ? `${fragmentBase}?upload=${encodeURIComponent(selectedUploadId)}` : fragmentBase;
+
+        try {
+            const response = await fetch(fragmentUrl, { headers: { 'Accept': 'application/json' } });
+            if (!response.ok) {
+                return;
+            }
+
+            const data = await response.json();
+
+            if (data.fileName !== undefined) {
+                const fileBadge = document.getElementById('keutataFileNameBadge');
+                if (fileBadge) fileBadge.textContent = data.fileName;
+            }
+
+            if (data.rows_count !== undefined) {
+                const rowsBadge = document.getElementById('keutataRowsBadge');
+                if (rowsBadge) rowsBadge.textContent = (data.rows_count || 0) + ' Rows';
+            }
+        } catch (error) {
+            // Ignore summary refresh errors so saving still completes.
+        }
+    };
+
     const saveCell = async (cell) => {
         const originalValue = cell.dataset.originalValue ?? '';
         const currentValue = normalizeValue(cell);
 
         if (currentValue === originalValue) {
-            return;
+            setDirtyState(cell, false);
+            return true;
         }
 
-        cell.dataset.originalValue = currentValue;
-        setStatus('Menyimpan...', variants.saving);
         cell.style.opacity = '0.7';
 
         try {
@@ -281,59 +320,44 @@ document.addEventListener('DOMContentLoaded', function () {
 
             cell.textContent = payload.value ?? '';
             cell.dataset.originalValue = payload.value ?? '';
-            setStatus(
-                payload.synced_to_google_sheet
-                    ? 'Tersimpan & Google Sheet diperbarui'
-                    : 'Tersimpan',
-                variants.success
-            );
+            setDirtyState(cell, false);
 
             if (payload.google_sync_error) {
-                window.setTimeout(() => setStatus('Tersimpan, sinkron Google gagal', variants.error), 1600);
+                setStatus('Tersimpan, sinkron Google gagal', variants.error);
+            } else {
+                setStatus(
+                    payload.synced_to_google_sheet ? 'Tersimpan dan Google Sheets diperbarui' : 'Tersimpan',
+                    variants.success
+                );
             }
 
-            // Refresh dashboard fragment (file name / rows) so summaries update immediately
-            try {
-                const selectedUploadId = @json($selectedUploadId ?? null);
-                const fragmentBase = @json(route('keutata.fragment'));
-                const fragmentUrl = selectedUploadId ? `${fragmentBase}?upload=${encodeURIComponent(selectedUploadId)}` : fragmentBase;
-                fetch(fragmentUrl, { headers: { 'Accept': 'application/json' } })
-                    .then(r => r.ok ? r.json() : Promise.reject(new Error('Gagal memuat ringkasan')))
-                    .then(data => {
-                        if (data.fileName !== undefined) {
-                            const fileBadge = document.getElementById('keutataFileNameBadge');
-                            if (fileBadge) fileBadge.textContent = data.fileName;
-                        }
-                        if (data.rows_count !== undefined) {
-                            const rowsBadge = document.getElementById('keutataRowsBadge');
-                            if (rowsBadge) rowsBadge.textContent = (data.rows_count || 0) + ' Rows';
-                        }
-                    })
-                    .catch(() => {
-                        // ignore fragment refresh errors silently
-                    });
-            } catch (e) {
-                // noop
-            }
-
-            window.setTimeout(() => setStatus('Siap mengedit', variants.idle), 1400);
+            await refreshSummary();
+            return true;
         } catch (error) {
-            cell.textContent = originalValue;
-            cell.dataset.originalValue = originalValue;
             setStatus(error.message || 'Gagal menyimpan.', variants.error);
-            window.setTimeout(() => setStatus('Siap mengedit', variants.idle), 2200);
+            return false;
         } finally {
             cell.style.opacity = '';
         }
     };
 
+    const markCellDirty = (cell) => {
+        const currentValue = normalizeValue(cell);
+        const originalValue = cell.dataset.originalValue ?? '';
+
+        setDirtyState(cell, currentValue !== originalValue);
+    };
+
     cells.forEach((cell) => {
-        cell.addEventListener('focus', () => {
-            cell.dataset.originalValue = normalizeValue(cell);
+        cell.addEventListener('input', () => {
+            markCellDirty(cell);
         });
 
-        cell.addEventListener('blur', () => {
-            void saveCell(cell);
+        cell.addEventListener('paste', (event) => {
+            event.preventDefault();
+            const text = event.clipboardData?.getData('text/plain') ?? '';
+            document.execCommand('insertText', false, text);
+            window.setTimeout(() => markCellDirty(cell), 0);
         });
 
         cell.addEventListener('keydown', (event) => {
@@ -342,46 +366,46 @@ document.addEventListener('DOMContentLoaded', function () {
                 cell.blur();
             }
         });
+    });
 
-        cell.addEventListener('paste', (event) => {
-            event.preventDefault();
-            const text = event.clipboardData?.getData('text/plain') ?? '';
-            document.execCommand('insertText', false, text);
-        });
+    saveButton.addEventListener('click', async () => {
+        if (dirtyCells.size === 0) {
+            setStatus('Tidak ada perubahan untuk disimpan', variants.idle);
+            return;
+        }
+
+        saveButton.disabled = true;
+        setStatus('Menyimpan perubahan...', variants.saving);
+
+        const pendingCells = Array.from(dirtyCells);
+        let savedCount = 0;
+        let failedCount = 0;
+
+        for (const cell of pendingCells) {
+            const saved = await saveCell(cell);
+            if (saved) {
+                savedCount += 1;
+            } else {
+                failedCount += 1;
+            }
+        }
+
+        saveButton.disabled = dirtyCells.size === 0;
+
+        if (failedCount > 0) {
+            setStatus(`${savedCount} sel tersimpan, ${failedCount} gagal`, variants.error);
+        } else {
+            setStatus('Semua perubahan tersimpan', variants.success);
+        }
+
+        window.setTimeout(() => {
+            if (dirtyCells.size === 0) {
+                setStatus('Belum ada perubahan', variants.idle);
+            }
+        }, 1400);
     });
 });
 </script>
 @endif
-@endpush
-@push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const toggleBtn = document.getElementById('keutataToggleButton');
-    const toggleInput = document.getElementById('keutataToggleInput');
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-
-    if (!toggleBtn || !toggleInput || !csrfToken) return;
-
-    toggleBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        const enabled = toggleInput.value === '1' ? 0 : 1;
-
-        fetch(@json(route('keutata.toggle-edit')), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify({ enabled: !!enabled }),
-        }).then(r => r.json()).then(data => {
-            // reload to re-render editable cells server-side
-            window.location.reload();
-        }).catch(() => {
-            alert('Gagal mengubah mode edit.');
-        });
-    });
-});
-</script>
 @endpush
 @endsection

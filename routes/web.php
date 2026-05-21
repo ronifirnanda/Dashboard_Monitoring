@@ -41,6 +41,5 @@ Route::prefix('admin')->name('admin.')->group(function () {
 Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/admin/keutata/cell', [DashboardController::class, 'updateKeutataCell'])->name('keutata.update-cell');
     Route::get('/admin/keutata/fragment', [DashboardController::class, 'keutataFragment'])->name('keutata.fragment');
-    Route::post('/admin/keutata/toggle-edit', [DashboardController::class, 'toggleKeutataEditMode'])->name('keutata.toggle-edit');
 });
 

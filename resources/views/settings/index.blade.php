@@ -93,7 +93,7 @@
                 <ol style="margin: 0; padding-left: 1.25rem; color: var(--muted); font-size: 0.9rem;">
                     <li>Buka Google Sheets Anda</li>
                     <li>Klik tombol <strong>"Share"</strong> (pojok kanan atas)</li>
-                    <li>Paste email berikut:<br><code style="background: #f5f8f6; padding: 0.5rem; display: inline-block; margin: 0.5rem 0; border-radius: 0.35rem;">monitoring-rpd-sync@monitoring-rpd.iam.gserviceaccount.com</code></li>
+                    <li>Paste email berikut:<br><code style="background: #f5f8f6; padding: 0.5rem; display: inline-block; margin: 0.5rem 0; border-radius: 0.35rem;">monitoring-rpd-sync@monitoring-rpd-496001.iam.gserviceaccount.com</code></li>
                     <li>Pilih permission <strong>"Editor"</strong></li>
                     <li>Klik <strong>"Share"</strong></li>
                 </ol>

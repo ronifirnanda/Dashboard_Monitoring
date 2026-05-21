@@ -21,33 +21,93 @@ class GoogleSheetsSyncService
         $spreadsheetId = trim((string) ($upload->analysis_data['spreadsheet_id'] ?? ''));
 
         if ($spreadsheetId === '') {
-            throw new RuntimeException('Spreadsheet ID Google Sheets tidak tersedia untuk upload ini.');
+            throw new RuntimeException('Spreadsheet ID Google Sheets tidak tersedia untuk upload ini. Pastikan file dimuat dari Google Sheets dan ID sudah tersimpan.');
         }
-        // Ensure we resolve credentials path (same as sync flow) so client can be created reliably
-        [$cfgSpreadsheetId, $credentialsPath] = $this->resolveConnectionConfig();
-
-        if ($credentialsPath === '' || ! file_exists($credentialsPath)) {
-            throw new RuntimeException('File kredensial Google Sheets tidak ditemukan saat mencoba update: '.$credentialsPath);
-        }
-
-        $client = $this->makeClient(false, $credentialsPath);
-        $sheetsService = new Sheets($client);
-        $range = "'".str_replace("'", "''", $sheetName)."'!".$cellAddress;
-
-        $valueRange = new \Google\Service\Sheets\ValueRange([
-            'range' => $range,
-            'values' => [[ $value ]],
-        ]);
-
+        
         try {
-            $sheetsService->spreadsheets_values->update(
-                $spreadsheetId,
-                $range,
-                $valueRange,
-                ['valueInputOption' => 'USER_ENTERED']
-            );
+            // Ensure we resolve credentials path (same as sync flow) so client can be created reliably
+            [$cfgSpreadsheetId, $credentialsPath] = $this->resolveConnectionConfig();
+
+            if ($credentialsPath === '' || ! file_exists($credentialsPath)) {
+                throw new RuntimeException('File kredensial Google Sheets tidak ditemukan: '.$credentialsPath.'. Periksa konfigurasi GOOGLE_SHEETS_CREDENTIALS_PATH.');
+            }
+
+            $client = $this->makeClient(false, $credentialsPath);
+            $sheetsService = new Sheets($client);
+            $range = "'".str_replace("'", "''", $sheetName)."'!".$cellAddress;
+
+            $valueRange = new \Google\Service\Sheets\ValueRange([
+                'range' => $range,
+                'values' => [[ $value ]],
+            ]);
+
+            try {
+                $sheetsService->spreadsheets_values->update(
+                    $spreadsheetId,
+                    $range,
+                    $valueRange,
+                    ['valueInputOption' => 'RAW']
+                );
+            } catch (\Google\Service\Exception $e) {
+                // If the range is invalid (sheet name missing/incorrect) attempt a fallback:
+                // use the first sheet in the spreadsheet and retry the update once.
+                $msg = $e->getMessage();
+                $code = $e->getCode();
+
+                if ($code === 400 || stripos($msg, 'Unable to parse range') !== false || $code === 404) {
+                    try {
+                        $meta = $sheetsService->spreadsheets->get($spreadsheetId);
+                        $sheets = $meta->getSheets() ?? [];
+
+                        if (! empty($sheets)) {
+                            $firstTitle = (string) ($sheets[0]->getProperties()?->getTitle() ?? 'Sheet1');
+                            $fallbackRange = "'".str_replace("'", "''", $firstTitle)."'!".$cellAddress;
+                            $fallbackValueRange = new \Google\Service\Sheets\ValueRange([
+                                'range' => $fallbackRange,
+                                'values' => [[ $value ]],
+                            ]);
+
+                            $sheetsService->spreadsheets_values->update(
+                                $spreadsheetId,
+                                $fallbackRange,
+                                $fallbackValueRange,
+                                ['valueInputOption' => 'RAW']
+                            );
+
+                            \Illuminate\Support\Facades\Log::info('Google Sheets update used fallback sheet', [
+                                'upload_id' => $upload->id ?? null,
+                                'requested_sheet' => $sheetName,
+                                'used_sheet' => $firstTitle,
+                                'cell' => $cellAddress,
+                            ]);
+
+                            return;
+                        }
+                    } catch (\Exception $inner) {
+                        // fall through and rethrow original error below
+                    }
+                }
+
+                // Re-throw to be handled by outer catch
+                throw $e;
+            }
         } catch (\Google\Service\Exception $e) {
-            throw new RuntimeException('Gagal update ke Google Sheets: '.$e->getMessage(), $e->getCode(), $e);
+            $errorMsg = $e->getMessage();
+            
+            // Provide more helpful error messages based on error codes
+            if ($e->getCode() === 403) {
+                throw new RuntimeException('Akses ditolak (403). Service account monitoring-rpd-sync@monitoring-rpd-496001.iam.gserviceaccount.com mungkin tidak memiliki akses Editor ke spreadsheet ini.');
+            } elseif ($e->getCode() === 404) {
+                throw new RuntimeException('Sheet atau Spreadsheet tidak ditemukan (404). Periksa nama sheet "'.$sheetName.'" dan ID spreadsheet "'.$spreadsheetId.'".');
+            } elseif ($e->getCode() === 429) {
+                throw new RuntimeException('Rate limit terlampaui (429). Google API sedang membatasi akses. Coba lagi dalam beberapa saat.');
+            } elseif ($e->getCode() === 401) {
+                throw new RuntimeException('Token akses tidak valid (401). Kredensial mungkin sudah kadaluarsa atau tidak terautentikasi dengan benar.');
+            }
+            
+            throw new RuntimeException('Gagal update ke Google Sheets: '.$errorMsg, $e->getCode(), $e);
+        } catch (\Exception $e) {
+            throw new RuntimeException('Error saat sinkronisasi Google Sheets: '.$e->getMessage(), 0, $e);
         }
     }
 
@@ -73,7 +133,7 @@ class GoogleSheetsSyncService
             if ($e->getCode() === 403) {
                 throw new RuntimeException(
                     'Akses ditolak (403). Silakan share spreadsheet dengan email: '.
-                    'monitoring-rpd-sync@monitoring-rpd.iam.gserviceaccount.com dengan permission Editor. '.
+                    'monitoring-rpd-sync@monitoring-rpd-496001.iam.gserviceaccount.com dengan permission Editor. '.
                     'Detail: '.$e->getMessage()
                 );
             } elseif ($e->getCode() === 404) {
@@ -174,6 +234,28 @@ class GoogleSheetsSyncService
 
         if ($credentialsPath === '' || ! file_exists($credentialsPath)) {
             throw new RuntimeException('File kredensial Google Sheets tidak ditemukan: '.$credentialsPath);
+        }
+
+        // Validate that the credentials file contains the expected service-account email.
+        // This helps catch cases where the JSON belongs to a different service account.
+        $expectedEmail = trim((string) env('GOOGLE_SHEETS_SERVICE_ACCOUNT_EMAIL', 'monitoring-rpd-sync@monitoring-rpd-496001.iam.gserviceaccount.com'));
+
+        try {
+            $credsJson = json_decode(file_get_contents($credentialsPath), true);
+            $clientEmail = trim((string) ($credsJson['client_email'] ?? ''));
+        } catch (\Throwable $e) {
+            throw new RuntimeException('Gagal membaca file kredensial Google Sheets: '.$e->getMessage(), 0, $e);
+        }
+
+        if ($clientEmail === '') {
+            throw new RuntimeException('File kredensial tidak berisi "client_email". Periksa isi: '.$credentialsPath);
+        }
+
+        if ($clientEmail !== $expectedEmail) {
+            throw new RuntimeException(
+                'Service account di file kredensial adalah "'.$clientEmail.'", tetapi sistem dikonfigurasi untuk menggunakan "'.$expectedEmail.'". '.
+                'Solusi: (1) Ganti file kredensial dengan yang milik "'.$expectedEmail.'", atau (2) setel env `GOOGLE_SHEETS_SERVICE_ACCOUNT_EMAIL` ke "'.$clientEmail.'" dan pastikan spreadsheet dibagikan ke alamat tersebut dengan role Editor.'
+            );
         }
 
         return [$spreadsheetId, $credentialsPath];

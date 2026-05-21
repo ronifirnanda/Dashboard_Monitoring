@@ -6,10 +6,10 @@ use App\Models\Upload;
 use App\Services\GoogleSheetsSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Throwable;
 
@@ -26,6 +26,7 @@ class DashboardController extends Controller
                 'excel_file_name' => $viewData['fileName'],
                 'excel_analysis' => $viewData['analysis'],
                 'excel_raw_sheets' => $viewData['rawSheets'],
+                'keutata_selected_upload_id' => $upload->id,
                 // indicate this load did NOT originate from archive
                 'keutata_loaded_from_archive' => false,
             ]);
@@ -75,6 +76,10 @@ class DashboardController extends Controller
 
         $selectedMonthDataBarang = $this->findBelanjaMonthData($chartBelanjaBarang['months'] ?? [], $selectedMonth);
         $selectedMonthDataPegawai = $this->findBelanjaMonthData($chartBelanjaPegawai['months'] ?? [], $selectedMonth);
+        $selectedMonthDataBarang = $this->recalculateDisplayedBelanjaTotals($selectedMonthDataBarang);
+        $selectedMonthDataPegawai = $this->recalculateDisplayedBelanjaTotals($selectedMonthDataPegawai);
+        $chartBelanjaBarang = $this->applyDisplayedBelanjaTotalsToChart($chartBelanjaBarang, $selectedMonthDataBarang);
+        $chartBelanjaPegawai = $this->applyDisplayedBelanjaTotalsToChart($chartBelanjaPegawai, $selectedMonthDataPegawai);
 
         return view('overview', [
             'rows' => $viewData['rows'],
@@ -141,6 +146,7 @@ class DashboardController extends Controller
                 'excel_file_name' => $viewData['fileName'],
                 'excel_analysis' => $viewData['analysis'],
                 'excel_raw_sheets' => $viewData['rawSheets'],
+                'keutata_selected_upload_id' => $upload->id,
                 // imports are treated as non-archive loads by default
                 'keutata_loaded_from_archive' => false,
             ]);
@@ -202,6 +208,8 @@ class DashboardController extends Controller
             }
         }
 
+        $isAdminUser = auth()->check() && auth()->user()?->role === 'admin';
+
         return view('keutata', [
             'rows' => $viewData['rows'],
             'fileName' => $viewData['fileName'],
@@ -214,27 +222,9 @@ class DashboardController extends Controller
             'selectedSheetData' => $selectedSheetData,
             'monthOptions' => $monthOptions,
             'selectedMonth' => $selectedMonth,
-            // Admin can edit when either loaded from archive or explicitly enabled via toggle
-            'isAdminMode' => Auth::check() && Auth::user()?->role === 'admin' && (
-                session('keutata_loaded_from_archive') === true || session('keutata_edit_enabled') === true
-            ),
-            'keutata_edit_enabled' => session('keutata_edit_enabled') === true,
+            'isAdminMode' => $isAdminUser,
             'success' => session('success'),
         ]);
-    }
-
-    public function toggleKeutataEditMode(Request $request)
-    {
-        $enabledRaw = $request->input('enabled');
-        $enabled = filter_var($enabledRaw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
-
-        if ($enabled === null) {
-            return response()->json(['message' => 'Invalid enabled parameter'], 422);
-        }
-
-        session(['keutata_edit_enabled' => $enabled]);
-
-        return response()->json(['enabled' => session('keutata_edit_enabled') === true]);
     }
 
     public function updateKeutataCell(Request $request, GoogleSheetsSyncService $sheetsSyncService)
@@ -265,7 +255,11 @@ class DashboardController extends Controller
                 ], 404);
             }
 
-            $worksheet->setCellValue($validated['cell'], (string) ($validated['value'] ?? ''));
+            $worksheet->setCellValueExplicit(
+                $validated['cell'],
+                (string) ($validated['value'] ?? ''),
+                DataType::TYPE_STRING
+            );
 
             $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
             $writer->save($storagePath);
@@ -278,22 +272,38 @@ class DashboardController extends Controller
                 'excel_file_name' => $viewData['fileName'],
                 'excel_analysis' => $viewData['analysis'],
                 'excel_raw_sheets' => $viewData['rawSheets'],
+                'keutata_selected_upload_id' => $upload->id,
             ]);
 
             $syncedToGoogleSheet = false;
             $googleSyncError = null;
 
             if (($upload->analysis_data['source'] ?? null) === 'google_sheets') {
-                try {
-                    $sheetsSyncService->updateCellInSpreadsheet(
-                        $upload,
-                        $validated['sheet'],
-                        $validated['cell'],
-                        (string) ($validated['value'] ?? '')
-                    );
-                    $syncedToGoogleSheet = true;
-                } catch (Throwable $syncException) {
-                    $googleSyncError = $syncException->getMessage();
+                // Validate required data before attempting sync
+                $spreadsheetId = trim((string) ($upload->analysis_data['spreadsheet_id'] ?? ''));
+                
+                if ($spreadsheetId === '') {
+                    $googleSyncError = 'Spreadsheet ID tidak tersedia. File mungkin tidak dimuat dari Google Sheets dengan benar.';
+                } else {
+                    try {
+                        $sheetsSyncService->updateCellInSpreadsheet(
+                            $upload,
+                            $validated['sheet'],
+                            $validated['cell'],
+                            (string) ($validated['value'] ?? '')
+                        );
+                        $syncedToGoogleSheet = true;
+                    } catch (Throwable $syncException) {
+                        $googleSyncError = $syncException->getMessage();
+                        
+                        // Log the error for debugging
+                        \Illuminate\Support\Facades\Log::warning('Google Sheets sync error', [
+                            'upload_id' => $validated['upload_id'],
+                            'sheet' => $validated['sheet'],
+                            'cell' => $validated['cell'],
+                            'error' => $googleSyncError,
+                        ]);
+                    }
                 }
             }
 
@@ -330,6 +340,7 @@ class DashboardController extends Controller
             $upload = Upload::find($uploadId);
 
             if ($upload) {
+                session(['keutata_selected_upload_id' => $upload->id]);
                 return $this->loadUploadViewData($upload);
             }
         }
@@ -338,6 +349,13 @@ class DashboardController extends Controller
         $sessionFileName = session('excel_file_name');
         $sessionAnalysis = session('excel_analysis');
         $sessionRawSheets = session('excel_raw_sheets');
+        $sessionSelectedUploadId = session('keutata_selected_upload_id');
+        $resolvedUploadId = is_numeric($sessionSelectedUploadId) ? (int) $sessionSelectedUploadId : null;
+
+        if ($resolvedUploadId === null && is_string($sessionFileName) && $sessionFileName !== '') {
+            $matchedUpload = Upload::where('file_name', $sessionFileName)->latest('id')->first();
+            $resolvedUploadId = $matchedUpload?->id;
+        }
 
         if (is_array($sessionRows) && $sessionFileName !== null) {
             return [
@@ -345,7 +363,7 @@ class DashboardController extends Controller
                 'fileName' => $sessionFileName,
                 'analysis' => is_array($sessionAnalysis) ? $sessionAnalysis : [],
                 'rawSheets' => is_array($sessionRawSheets) ? $sessionRawSheets : [],
-                'selectedUploadId' => null,
+                'selectedUploadId' => $resolvedUploadId,
             ];
         }
 
@@ -601,10 +619,13 @@ class DashboardController extends Controller
             $teams = array_values($monthData['teams']);
             usort($teams, static fn ($a, $b) => $b['target'] <=> $a['target']);
 
+            // Only scale bars based on teams that are actually rendered in the chart.
+            $displayTeams = array_slice($teams, 0, 8);
+
             $monthTotalTarget = 0.0;
             $monthTotalRealisasi = 0.0;
 
-            foreach ($teams as &$team) {
+            foreach ($displayTeams as &$team) {
                 $monthTotalTarget += $team['target'];
                 $monthTotalRealisasi += $team['realisasi'];
             }
@@ -612,16 +633,29 @@ class DashboardController extends Controller
 
             $maxScale = 0.0;
 
-            if ($teams !== []) {
-                $maxScale = max(array_map(static fn ($team) => max($team['target'], $team['realisasi']), $teams));
+            if ($displayTeams !== []) {
+                $maxScale = max(array_map(static fn ($team) => max($team['target'], $team['realisasi']), $displayTeams));
             }
 
-            foreach ($teams as &$team) {
+            foreach ($displayTeams as &$team) {
                 $team['target_formatted'] = number_format($team['target'], 0, ',', '.');
                 $team['realisasi_formatted'] = number_format($team['realisasi'], 0, ',', '.');
                 $team['ratio'] = $team['target'] > 0 ? min(100, ($team['realisasi'] / $team['target']) * 100) : 0;
-                $team['target_bar_height'] = $maxScale > 0 ? max(12, (int) round(($team['target'] / $maxScale) * 150)) : 12;
-                $team['realisasi_bar_height'] = $maxScale > 0 ? max(12, (int) round(($team['realisasi'] / $maxScale) * 150)) : 12;
+
+                // Keep zero values at zero height, and use a nonlinear scale so low values remain distinguishable.
+                $targetHeight = 0;
+                $realisasiHeight = 0;
+
+                if ($maxScale > 0 && $team['target'] > 0) {
+                    $targetHeight = (int) round(pow($team['target'] / $maxScale, 0.6) * 150);
+                }
+
+                if ($maxScale > 0 && $team['realisasi'] > 0) {
+                    $realisasiHeight = (int) round(pow($team['realisasi'] / $maxScale, 0.6) * 150);
+                }
+
+                $team['target_bar_height'] = $team['target'] > 0 ? max(4, $targetHeight) : 0;
+                $team['realisasi_bar_height'] = $team['realisasi'] > 0 ? max(4, $realisasiHeight) : 0;
             }
             unset($team);
 
@@ -629,7 +663,7 @@ class DashboardController extends Controller
 
             $months[] = [
                 'label' => $monthData['month'],
-                'teams' => array_slice($teams, 0, 8),
+                'teams' => $displayTeams,
                 'total_target_formatted' => number_format($monthTotalTarget, 0, ',', '.'),
                 'total_realisasi_formatted' => number_format($monthTotalRealisasi, 0, ',', '.'),
                 'ratio' => max(0, min(100, round($monthRatio, 2))),
@@ -815,13 +849,58 @@ class DashboardController extends Controller
                 continue;
             }
 
+            $headerCells = $rows[$index + 1]['cells'] ?? [];
+            $targetColumn = null;
+            $realisasiColumn = null;
+
+            foreach ($headerCells as $columnIndex => $headerCell) {
+                $normalizedHeader = strtolower(trim((string) $headerCell));
+
+                if ($normalizedHeader === '') {
+                    continue;
+                }
+
+                if ($targetColumn === null && str_contains($normalizedHeader, 'target')) {
+                    $targetColumn = (int) $columnIndex;
+                    continue;
+                }
+
+                if (
+                    $realisasiColumn === null &&
+                    (
+                        str_contains($normalizedHeader, 'realisasi') ||
+                        str_contains($normalizedHeader, 'actual') ||
+                        str_contains($normalizedHeader, 'aktual')
+                    )
+                ) {
+                    $realisasiColumn = (int) $columnIndex;
+                }
+            }
+
+            // Fallback for older fixed layout (A label, B target, C realisasi).
+            if ($targetColumn === null) {
+                $targetColumn = 1;
+            }
+
+            if ($realisasiColumn === null) {
+                $realisasiColumn = 2;
+            }
+
+            // Team label is typically placed right before target/realisasi columns.
+            $labelColumn = max(0, min($targetColumn, $realisasiColumn) - 1);
+
             $sectionRows = [];
 
             for ($dataIndex = $index + 2; $dataIndex < count($rows); $dataIndex++) {
                 $dataCells = $rows[$dataIndex]['cells'] ?? [];
-                $label = trim((string) ($dataCells[0] ?? ''));
-                $target = trim((string) ($dataCells[1] ?? ''));
-                $realisasi = trim((string) ($dataCells[2] ?? ''));
+                $nextRowText = strtolower(trim(implode(' ', array_filter(array_map(static fn ($cell) => trim((string) $cell), $dataCells)))));
+                $label = trim((string) ($dataCells[$labelColumn] ?? ''));
+                $target = trim((string) ($dataCells[$targetColumn] ?? ''));
+                $realisasi = trim((string) ($dataCells[$realisasiColumn] ?? ''));
+
+                if ($nextRowText !== '' && str_contains($nextRowText, 'rpd bulan')) {
+                    break;
+                }
 
                 if ($label === '' && $target === '' && $realisasi === '') {
                     break;
@@ -860,6 +939,43 @@ class DashboardController extends Controller
         }
 
         return null;
+    }
+
+    private function recalculateDisplayedBelanjaTotals(?array $monthData): ?array
+    {
+        if ($monthData === null) {
+            return null;
+        }
+
+        $teams = is_array($monthData['teams'] ?? null) ? $monthData['teams'] : [];
+        $displayedTarget = 0.0;
+        $displayedRealisasi = 0.0;
+
+        foreach ($teams as $team) {
+            $displayedTarget += (float) ($team['target'] ?? 0.0);
+            $displayedRealisasi += (float) ($team['realisasi'] ?? 0.0);
+        }
+
+        $ratio = $displayedTarget > 0 ? ($displayedRealisasi / $displayedTarget) * 100 : 0;
+
+        $monthData['total_target_formatted'] = number_format($displayedTarget, 0, ',', '.');
+        $monthData['total_realisasi_formatted'] = number_format($displayedRealisasi, 0, ',', '.');
+        $monthData['ratio'] = max(0, min(100, round($ratio, 2)));
+
+        return $monthData;
+    }
+
+    private function applyDisplayedBelanjaTotalsToChart(array $chartData, ?array $selectedMonthData): array
+    {
+        if ($selectedMonthData === null) {
+            return $chartData;
+        }
+
+        $chartData['total_target_formatted'] = $selectedMonthData['total_target_formatted'] ?? number_format(0, 0, ',', '.');
+        $chartData['total_realisasi_formatted'] = $selectedMonthData['total_realisasi_formatted'] ?? number_format(0, 0, ',', '.');
+        $chartData['overall_ratio'] = (float) ($selectedMonthData['ratio'] ?? 0);
+
+        return $chartData;
     }
 
     private function readCellDisplayValue($sheet, string $cellAddress): string
@@ -1585,6 +1701,7 @@ class DashboardController extends Controller
                 'excel_file_name' => $viewData['fileName'],
                 'excel_analysis' => $viewData['analysis'],
                 'excel_raw_sheets' => $viewData['rawSheets'],
+                'keutata_selected_upload_id' => $upload->id,
                 // mark that this keutata load originated from archive so edit mode can be enabled
                 'keutata_loaded_from_archive' => true,
             ]);

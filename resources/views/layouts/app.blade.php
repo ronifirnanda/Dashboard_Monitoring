@@ -66,6 +66,7 @@
             position: fixed;
             inset: 0 auto 0 0;
             overflow-y: auto;
+            z-index: 10000; /* ensure sidebar stays above page content */
         }
 
         .brand {
@@ -216,6 +217,7 @@
             margin-left: 255px;
             width: calc(100% - 255px);
             padding: 22px;
+            z-index: 0; /* keep main content below sidebar */
         }
 
         .topbar {
