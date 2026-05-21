@@ -9,6 +9,9 @@
 @endsection
 
 @section('content')
+@php
+    $isAdmin = auth()->check() && auth()->user()->role === 'admin';
+@endphp
 <style>
     .bulk-actions {
         display: none;
@@ -53,25 +56,29 @@
         </div>
     @endif
 
-    <div class="bulk-actions" id="bulkActions">
-        <div class="bulk-actions-info">
-            <span id="selectedCount">0</span> file dipilih
+    @if($isAdmin)
+        <div class="bulk-actions" id="bulkActions">
+            <div class="bulk-actions-info">
+                <span id="selectedCount">0</span> file dipilih
+            </div>
+            <button type="button" class="btn-pill btn-outline-soft py-1 px-3" onclick="deselectAll()" style="font-size: 0.85rem;">
+                Batalkan Pilihan
+            </button>
+            <button type="button" class="btn-pill py-1 px-3" style="font-size: 0.85rem; background: #c92a2a; color: white; border: none;" data-bs-toggle="modal" data-bs-target="#bulkDeleteModal">
+                <i class="bi bi-trash me-1"></i>Hapus Terpilih
+            </button>
         </div>
-        <button type="button" class="btn-pill btn-outline-soft py-1 px-3" onclick="deselectAll()" style="font-size: 0.85rem;">
-            Batalkan Pilihan
-        </button>
-        <button type="button" class="btn-pill py-1 px-3" style="font-size: 0.85rem; background: #c92a2a; color: white; border: none;" data-bs-toggle="modal" data-bs-target="#bulkDeleteModal">
-            <i class="bi bi-trash me-1"></i>Hapus Terpilih
-        </button>
-    </div>
+    @endif
 
     <div style="overflow-x: auto;">
         <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
             <thead>
                 <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
-                    <th style="padding: 0.75rem; text-align: center; font-weight: 600; width: 40px;">
-                        <input type="checkbox" id="selectAll" style="cursor: pointer; width: 18px; height: 18px;">
-                    </th>
+                    @if($isAdmin)
+                        <th style="padding: 0.75rem; text-align: center; font-weight: 600; width: 40px;">
+                            <input type="checkbox" id="selectAll" style="cursor: pointer; width: 18px; height: 18px;">
+                        </th>
+                    @endif
                     <th style="padding: 0.75rem; text-align: left; font-weight: 600;">No.</th>
                     <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Nama File</th>
                     <th style="padding: 0.75rem; text-align: center; font-weight: 600;">Jumlah Baris</th>
@@ -82,9 +89,11 @@
             <tbody>
                 @forelse ($uploads as $index => $upload)
                 <tr style="border-bottom: 1px solid #eee; {{ ($index + 1) % 2 === 0 ? 'background: #fafafa;' : '' }}">
-                    <td style="padding: 0.75rem; text-align: center;">
-                        <input type="checkbox" class="file-checkbox" value="{{ $upload->id }}" style="cursor: pointer; width: 18px; height: 18px;">
-                    </td>
+                    @if($isAdmin)
+                        <td style="padding: 0.75rem; text-align: center;">
+                            <input type="checkbox" class="file-checkbox" value="{{ $upload->id }}" style="cursor: pointer; width: 18px; height: 18px;">
+                        </td>
+                    @endif
                     <td style="padding: 0.75rem;">{{ ($uploads->currentPage() - 1) * $uploads->perPage() + $index + 1 }}</td>
                     <td style="padding: 0.75rem;">
                         <i class="bi bi-file-earmark-spreadsheet" style="margin-right: 0.5rem; color: #28a745;"></i>
@@ -99,17 +108,23 @@
                         {{ $upload->created_at->copy()->timezone('Asia/Jakarta')->format('d M Y, H:i') }}
                     </td>
                     <td style="padding: 0.75rem; text-align: center;">
-                        <a href="{{ route('archive.load', $upload->id) }}" class="btn-pill btn-primary-soft py-1 px-2" style="font-size: 0.85rem;">
-                            <i class="bi bi-cloud-download me-1"></i>Muat
-                        </a>
-                        <button type="button" class="btn-pill btn-outline-soft py-1 px-2" style="font-size: 0.85rem; color: #c92a2a;" data-bs-toggle="modal" data-bs-target="#deleteModal" data-file-id="{{ $upload->id }}" data-file-name="{{ $upload->file_name }}">
-                            <i class="bi bi-trash me-1"></i>Hapus
-                        </button>
+                        @if($isAdmin)
+                            <a href="{{ route('archive.load', $upload->id) }}" class="btn-pill btn-primary-soft py-1 px-2" style="font-size: 0.85rem;">
+                                <i class="bi bi-cloud-download me-1"></i>Muat
+                            </a>
+                            <button type="button" class="btn-pill btn-outline-soft py-1 px-2" style="font-size: 0.85rem; color: #c92a2a;" data-bs-toggle="modal" data-bs-target="#deleteModal" data-file-id="{{ $upload->id }}" data-file-name="{{ $upload->file_name }}">
+                                <i class="bi bi-trash me-1"></i>Hapus
+                            </button>
+                        @else
+                            <a href="{{ route('archive.download', $upload->id) }}" class="btn-pill btn-primary-soft py-1 px-2" style="font-size: 0.85rem;">
+                                <i class="bi bi-download me-1"></i>Download
+                            </a>
+                        @endif
                     </td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" style="padding: 1.5rem; text-align: center; color: #999;">
+                    <td colspan="{{ $isAdmin ? 6 : 5 }}" style="padding: 1.5rem; text-align: center; color: #999;">
                         Belum ada file yang diupload
                     </td>
                 </tr>
@@ -139,8 +154,9 @@
     @endif
 </div>
 
+@if($isAdmin)
 <!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true" data-bs-backdrop="false">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-radius: 12px; border: 1px solid #dfeee1;">
             <div class="modal-header" style="border-bottom: 1px solid #dfeee1; background: linear-gradient(180deg, #fbfefb 0%, #f5faf5 100%);">
@@ -176,7 +192,9 @@
         </div>
     </div>
 </div>
+@endif
 
+@if($isAdmin)
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const selectAllCheckbox = document.getElementById('selectAll');
@@ -256,7 +274,7 @@ function deselectAll() {
 </script>
 
 <!-- Bulk Delete Modal -->
-<div class="modal fade" id="bulkDeleteModal" tabindex="-1" aria-labelledby="bulkDeleteModalLabel" aria-hidden="true">
+<div class="modal fade" id="bulkDeleteModal" tabindex="-1" aria-labelledby="bulkDeleteModalLabel" aria-hidden="true" data-bs-backdrop="false">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-radius: 12px; border: 1px solid #dfeee1;">
             <div class="modal-header" style="border-bottom: 1px solid #dfeee1; background: linear-gradient(180deg, #fbfefb 0%, #f5faf5 100%);">
@@ -292,43 +310,6 @@ function deselectAll() {
         </div>
     </div>
 </div>
-
-<!-- Single Delete Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius: 12px; border: 1px solid #dfeee1;">
-            <div class="modal-header" style="border-bottom: 1px solid #dfeee1; background: linear-gradient(180deg, #fbfefb 0%, #f5faf5 100%);">
-                <h5 class="modal-title" id="deleteModalLabel" style="color: #304935; font-weight: 600;">Hapus File Arsip</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" style="padding: 1.5rem;">
-                <div style="display: flex; gap: 1rem; align-items: flex-start; margin-bottom: 1rem;">
-                    <div style="color: #c92a2a; font-size: 1.5rem;">
-                        <i class="bi bi-exclamation-triangle-fill"></i>
-                    </div>
-                    <div>
-                        <p style="margin: 0 0 0.5rem 0; color: #304935; font-weight: 500;">Anda yakin ingin menghapus file ini?</p>
-                        <p style="margin: 0; color: #5e6f60; font-size: 0.9rem;">File: <strong id="deleteFileName"></strong></p>
-                        <p style="margin: 0.5rem 0 0 0; color: #c92a2a; font-size: 0.85rem;">
-                            <i class="bi bi-info-circle me-1"></i>Tindakan ini tidak bisa dibatalkan.
-                        </p>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer" style="border-top: 1px solid #dfeee1; background: #fbfefb; padding: 1rem;">
-                <button type="button" class="btn-pill btn-outline-soft" data-bs-dismiss="modal" style="margin-right: 0.5rem;">
-                    Batal
-                </button>
-                <form id="deleteForm" method="POST" style="display: inline;">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn-pill" style="background: #c92a2a; color: white; border: none; font-weight: 500;">
-                        <i class="bi bi-trash me-1"></i>Hapus File
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+@endif
 
 @endsection

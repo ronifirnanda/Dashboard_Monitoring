@@ -15,6 +15,7 @@ Route::get('/overview', [DashboardController::class, 'overview'])->name('overvie
 Route::get('/keutata', [DashboardController::class, 'keutata'])->name('keutata');
 Route::get('/archive', [DashboardController::class, 'archive'])->name('archive');
 Route::get('/archive/load/{id}', [DashboardController::class, 'archiveLoad'])->name('archive.load');
+Route::get('/archive/download/{id}', [DashboardController::class, 'archiveDownload'])->name('archive.download');
 Route::post('/admin/keutata/import', [DashboardController::class, 'importKeutata'])->name('keutata.import');
 Route::post('/admin/keutata/sync-google-sheet', [DashboardController::class, 'syncGoogleSheet'])->name('keutata.sync-google-sheet');
 

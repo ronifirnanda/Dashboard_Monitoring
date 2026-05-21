@@ -1683,6 +1683,10 @@ class DashboardController extends Controller
 
     public function archiveLoad($id): View|RedirectResponse
     {
+        if (! auth()->check() || auth()->user()->role !== 'admin') {
+            return redirect()->route('archive')->with('error', 'Hanya admin yang dapat memuat file arsip.');
+        }
+
         $upload = Upload::find($id);
 
         if (! $upload) {
@@ -1710,6 +1714,28 @@ class DashboardController extends Controller
         } catch (Throwable $e) {
             return redirect()->route('archive')->with('error', 'Gagal membaca file: '.$e->getMessage());
         }
+    }
+
+    public function archiveDownload($id)
+    {
+        $upload = Upload::find($id);
+
+        if (! $upload) {
+            return redirect()->route('archive')->with('error', 'File tidak ditemukan.');
+        }
+
+        $storageCandidates = [
+            storage_path('app/private/'.$upload->file_path),
+            storage_path('app/private/private/'.$upload->file_path),
+        ];
+
+        foreach ($storageCandidates as $path) {
+            if (file_exists($path)) {
+                return response()->download($path, $upload->file_name);
+            }
+        }
+
+        return redirect()->route('archive')->with('error', 'File tidak ada di storage.');
     }
 
     public function archiveDelete(Request $request, $id): RedirectResponse

@@ -106,6 +106,96 @@ class KeutataExcelUploadTest extends TestCase
         }
     }
 
+    public function test_it_hides_upload_data_shortcut_for_regular_users(): void
+    {
+        $regularUser = User::factory()->create(['role' => 'user']);
+
+        $overviewResponse = $this->actingAs($regularUser)->get(route('overview'));
+
+        $overviewResponse->assertStatus(200);
+        $content = $overviewResponse->getContent();
+
+        $this->assertStringNotContainsString('Upload Data', $content);
+        $this->assertStringNotContainsString('Upload Data Baru', $content);
+        $this->assertStringContainsString('Lihat', $content);
+    }
+
+    public function test_it_shows_download_only_actions_for_regular_archive_users(): void
+    {
+        $this->clearUploadedFiles();
+
+        $tempFile = $this->createSpreadsheetFile();
+
+        try {
+            $this->post(route('keutata.import'), [
+                'excel_file' => new UploadedFile(
+                    $tempFile,
+                    'monitoring.xlsx',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    null,
+                    true
+                ),
+            ])->assertStatus(302);
+
+            $upload = Upload::query()->latest('id')->firstOrFail();
+            $regularUser = User::factory()->create(['role' => 'user']);
+
+            $archiveResponse = $this->actingAs($regularUser)->get(route('archive'));
+
+            $archiveResponse->assertStatus(200);
+            $content = $archiveResponse->getContent();
+
+            $this->assertStringContainsString('Download', $content);
+            $this->assertStringNotContainsString('Muat', $content);
+            $this->assertStringNotContainsString('Hapus', $content);
+
+            $downloadResponse = $this->actingAs($regularUser)->get(route('archive.download', $upload->id));
+
+            $downloadResponse->assertStatus(200);
+            $this->assertStringContainsString('attachment', (string) $downloadResponse->headers->get('content-disposition'));
+            $this->assertStringContainsString('monitoring.xlsx', (string) $downloadResponse->headers->get('content-disposition'));
+        } finally {
+            if (is_file($tempFile)) {
+                @unlink($tempFile);
+            }
+
+            $this->clearUploadedFiles();
+        }
+    }
+
+    public function test_it_blocks_regular_users_from_loading_archive_file(): void
+    {
+        $this->clearUploadedFiles();
+
+        $tempFile = $this->createSpreadsheetFile();
+
+        try {
+            $this->post(route('keutata.import'), [
+                'excel_file' => new UploadedFile(
+                    $tempFile,
+                    'monitoring.xlsx',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    null,
+                    true
+                ),
+            ])->assertStatus(302);
+
+            $upload = Upload::query()->latest('id')->firstOrFail();
+            $regularUser = User::factory()->create(['role' => 'user']);
+
+            $response = $this->actingAs($regularUser)->get(route('archive.load', $upload->id));
+
+            $response->assertRedirect(route('archive'));
+            $response->assertSessionHas('error', 'Hanya admin yang dapat memuat file arsip.');
+        } finally {
+            if (is_file($tempFile)) {
+                @unlink($tempFile);
+            }
+
+            $this->clearUploadedFiles();
+        }
+    }
+
     public function test_it_keeps_edit_mode_available_without_resync_on_next_keutata_open(): void
     {
         $this->clearUploadedFiles();

@@ -4,7 +4,9 @@
 
 @section('page-actions')
 <a href="#charts" class="btn-pill btn-primary-soft"><i class="bi bi-bar-chart-line me-2"></i>Lihat</a>
+@if(auth()->check() && auth()->user()->role === 'admin')
 <a href="#data-source" class="btn-pill btn-outline-soft"><i class="bi bi-cloud-arrow-up me-2"></i>Upload Data</a>
+@endif
 @endsection
 
 @section('content')
