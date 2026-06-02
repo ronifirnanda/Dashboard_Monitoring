@@ -511,11 +511,11 @@
                                     <div style="width:auto; flex:0 0 auto; text-align:center;">
                                         <div style="display:flex; align-items:flex-end; justify-content:center; gap:1rem; height:150px; margin-bottom:.45rem;">
                                             <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:0 0 auto;">
-                                                <div style="width:72px; border-radius:0; height: {{ $team['target_bar_height'] }}px; background: linear-gradient(180deg, #38503f 0%, #4b6a56 100%); box-shadow: 0 8px 18px rgba(56,80,63,.12); cursor:pointer;" title="Target: Rp {{ $team['target_formatted'] }}"></div>
+                                                <div class="chart-bar-target" style="width:72px; border-radius:0; height: {{ $team['target_bar_height'] }}px; background: linear-gradient(180deg, #38503f 0%, #4b6a56 100%); box-shadow: 0 8px 18px rgba(56,80,63,.12); cursor:pointer;" title="Target: Rp {{ $team['target_formatted'] }}"></div>
                                                 <span style="font-size:10px; color:#9aa8a0; line-height:1;">T</span>
                                             </div>
                                             <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:0 0 auto;">
-                                                <div style="width:72px; border-radius:0; height: {{ $team['realisasi_bar_height'] }}px; background: linear-gradient(180deg, #8bc19a 0%, #6fa47f 100%); box-shadow: 0 8px 18px rgba(111,164,127,.12); cursor:pointer;" title="Realisasi: Rp {{ $team['realisasi_formatted'] }}"></div>
+                                                <div class="chart-bar-realisasi" style="width:72px; border-radius:0; height: {{ $team['realisasi_bar_height'] }}px; background: linear-gradient(180deg, #8bc19a 0%, #6fa47f 100%); box-shadow: 0 8px 18px rgba(111,164,127,.12); cursor:pointer;" title="Realisasi: Rp {{ $team['realisasi_formatted'] }}"></div>
                                                 <span style="font-size:10px; color:#9aa8a0; line-height:1;">R</span>
                                             </div>
                                         </div>
@@ -744,11 +744,11 @@
                                         <div style="width:auto; flex:0 0 auto; text-align:center;">
                                             <div style="display:flex; align-items:flex-end; justify-content:center; gap:.6rem; height:200px; margin-bottom:.45rem;">
                                                 <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:0 0 auto;">
-                                                    <div style="width:56px; border-radius:0; height: {{ $team['target_bar_height'] * 1.2 }}px; background: linear-gradient(180deg, #1f6b45 0%, #2f8b59 100%); box-shadow: 0 6px 14px rgba(31,107,69,.12); cursor:pointer;" title="Target: Rp {{ $team['target_formatted'] }}"></div>
+                                                    <div class="chart-bar-target" style="width:56px; border-radius:0; height: {{ $team['target_bar_height'] * 1.2 }}px; background: linear-gradient(180deg, #1f6b45 0%, #2f8b59 100%); box-shadow: 0 6px 14px rgba(31,107,69,.12); cursor:pointer;" title="Target: Rp {{ $team['target_formatted'] }}"></div>
                                                     <span style="font-size:9px; color:#9aa8a0; line-height:1;">T</span>
                                                 </div>
                                                 <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:0 0 auto;">
-                                                    <div style="width:56px; border-radius:0; height: {{ $team['realisasi_bar_height'] * 1.2 }}px; background: linear-gradient(180deg, #7bbd86 0%, #4d9f60 100%); box-shadow: 0 6px 14px rgba(77,159,96,.12); cursor:pointer;" title="Realisasi: Rp {{ $team['realisasi_formatted'] }}"></div>
+                                                    <div class="chart-bar-realisasi" style="width:56px; border-radius:0; height: {{ $team['realisasi_bar_height'] * 1.2 }}px; background: linear-gradient(180deg, #7bbd86 0%, #4d9f60 100%); box-shadow: 0 6px 14px rgba(77,159,96,.12); cursor:pointer;" title="Realisasi: Rp {{ $team['realisasi_formatted'] }}"></div>
                                                     <span style="font-size:9px; color:#9aa8a0; line-height:1;">R</span>
                                                 </div>
                                             </div>

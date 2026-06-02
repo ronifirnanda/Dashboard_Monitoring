@@ -54,10 +54,12 @@
         .app-shell {
             min-height: 100vh;
             display: flex;
+            align-items: flex-start;
         }
 
         .sidebar {
             width: 255px;
+            flex-shrink: 0;
             background: rgba(255, 255, 255, 0.92);
             backdrop-filter: blur(18px);
             border-right: 1px solid var(--sidebar-border);
@@ -218,6 +220,7 @@
             width: calc(100% - 255px);
             padding: 22px;
             z-index: 0; /* keep main content below sidebar */
+            min-width: 0;
         }
 
         .modal-backdrop.show {
@@ -287,6 +290,8 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
         }
 
         .icon-btn {
@@ -313,6 +318,7 @@
             padding-left: 10px;
             position: relative;
             cursor: pointer;
+            min-width: 0;
         }
 
         .profile-chip .avatar {
@@ -341,6 +347,17 @@
             font-size: 12px;
             color: var(--muted);
             margin-top: 2px;
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .auth-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
         }
 
         .profile-dropdown {
@@ -432,6 +449,10 @@
             align-items: center;
             gap: 10px;
             flex-wrap: wrap;
+        }
+
+        .page-actions .btn-pill {
+            white-space: nowrap;
         }
 
         .btn-pill {
@@ -870,6 +891,25 @@
             .section-grid {
                 grid-template-columns: 1fr;
             }
+
+            .page-title {
+                font-size: 30px;
+            }
+
+            .topbar {
+                flex-wrap: wrap;
+            }
+
+            .search-box {
+                max-width: none;
+                order: 1;
+                flex-basis: 100%;
+            }
+
+            .topbar-actions {
+                width: 100%;
+                justify-content: flex-start;
+            }
         }
 
         @media (max-width: 991px) {
@@ -890,6 +930,19 @@
                 padding: 16px;
             }
 
+            .sidebar {
+                width: 100%;
+                padding: 16px;
+            }
+
+            .brand {
+                padding: 4px 0 16px;
+            }
+
+            .sidebar-footer {
+                display: none;
+            }
+
             .topbar,
             .page-head {
                 flex-direction: column;
@@ -899,6 +952,10 @@
             .search-box {
                 max-width: none;
             }
+
+            .page-title {
+                font-size: 28px;
+            }
         }
 
         @media (max-width: 640px) {
@@ -906,8 +963,69 @@
                 grid-template-columns: 1fr;
             }
 
+            .sidebar {
+                padding: 14px 14px 10px;
+            }
+
+            .brand img {
+                width: 52px;
+                height: 52px;
+            }
+
+            .nav-link {
+                padding: 10px 12px;
+            }
+
+            .nav-link .text {
+                font-size: 13px;
+            }
+
+            .topbar {
+                padding: 12px 14px;
+                border-radius: 20px;
+            }
+
+            .search-box input {
+                padding-left: 40px;
+                padding-right: 44px;
+                font-size: 13px;
+            }
+
+            .search-shortcut {
+                display: none;
+            }
+
             .topbar-actions {
-                flex-wrap: wrap;
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .profile-chip {
+                width: 100%;
+                padding-left: 0;
+                justify-content: flex-start;
+            }
+
+            .profile-copy span {
+                max-width: 160px;
+            }
+
+            .auth-actions {
+                width: 100%;
+            }
+
+            .auth-actions .btn-pill {
+                flex: 1 1 100%;
+                text-align: center;
+            }
+
+            .page-actions {
+                width: 100%;
+            }
+
+            .page-actions .btn-pill {
+                flex: 1 1 100%;
+                text-align: center;
             }
         }
     </style>
@@ -1005,7 +1123,7 @@
                                     <span>{{ auth()->user()->email ?? '' }}</span>
                                 </div>
                             </div>
-                            <div style="display:flex; gap:8px; align-items:center;">
+                            <div class="auth-actions">
                                 <a href="{{ route('profile.edit') }}" class="btn-pill btn-outline-soft" style="font-size:0.9rem; padding:8px 12px;">Edit Profil</a>
                                 <form action="{{ route('admin.logout') }}" method="POST" style="margin:0;">
                                     @csrf
